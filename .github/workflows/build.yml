@@ -24,7 +24,6 @@ jobs:
         mkdir clean_project
         cd clean_project
         
-        # 1. 建立 settings.gradle
         cat << 'EOF' > settings.gradle
         pluginManagement {
             repositories {
@@ -44,13 +43,11 @@ jobs:
         include ':app'
         EOF
 
-        # 💡 核心修正：建立 gradle.properties 並強制啟用 AndroidX 支援功能！
         cat << 'EOF' > gradle.properties
         android.useAndroidX=true
         android.enableJetifier=true
         EOF
 
-        # 2. 建立根目錄 build.gradle
         cat << 'EOF' > build.gradle
         plugins {
             id 'com.android.application' version '8.2.2' apply false
@@ -58,11 +55,9 @@ jobs:
         }
         EOF
 
-        # 3. 建立 app 模組目錄結構
         mkdir -p app/src/main/java/com/example/manusgps
         mkdir -p app/src/main/res/layout
 
-        # 4. 建立 app/build.gradle
         cat << 'EOF' > app/build.gradle
         plugins {
             id 'com.android.application'
@@ -99,29 +94,26 @@ jobs:
         }
         EOF
 
-        # 5. 建立 AndroidManifest.xml
-        cat << 'EOF' > app/src/main/AndroidManifest.xml
-        <manifest xmlns:android="http://android.com">
-            <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-            <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-            <uses-permission android:name="android.permission.INTERNET" />
-            <application
-                android:allowBackup="true"
-                android:label="Manus GPS App"
-                android:theme="@style/Theme.AppCompat.Light.NoActionBar">
-                <activity
-                    android:name=".MainActivity"
-                    android:exported="true">
-                    <intent-filter>
-                        <action android:name="android.intent.action.MAIN" />
-                        <category android:name="android.intent.category.LAUNCHER" />
-                    </intent-filter>
-                </activity>
-            </application>
-        </manifest>
-        EOF
+        # 💡 核心修正：重新修正清單內部的 android:name 語法，確保其不被 GitHub 的引號功能吃掉
+        echo '<manifest xmlns:android="http://android.com">' > app/src/main/AndroidManifest.xml
+        echo '    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />' >> app/src/main/AndroidManifest.xml
+        echo '    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />' >> app/src/main/AndroidManifest.xml
+        echo '    <uses-permission android:name="android.permission.INTERNET" />' >> app/src/main/AndroidManifest.xml
+        echo '    <application' >> app/src/main/AndroidManifest.xml
+        echo '        android:allowBackup="true"' >> app/src/main/AndroidManifest.xml
+        echo '        android:label="Manus GPS App"' >> app/src/main/AndroidManifest.xml
+        echo '        android:theme="@style/Theme.AppCompat.Light.NoActionBar">' >> app/src/main/AndroidManifest.xml
+        echo '        <activity' >> app/src/main/AndroidManifest.xml
+        echo '            android:name=".MainActivity"' >> app/src/main/AndroidManifest.xml
+        echo '            android:exported="true">' >> app/src/main/AndroidManifest.xml
+        echo '            <intent-filter>' >> app/src/main/AndroidManifest.xml
+        echo '                <action android:name="android.intent.action.MAIN" />' >> app/src/main/AndroidManifest.xml
+        echo '                <category android:name="android.intent.category.LAUNCHER" />' >> app/src/main/AndroidManifest.xml
+        echo '            </intent-filter>' >> app/src/main/AndroidManifest.xml
+        echo '        </activity>' >> app/src/main/AndroidManifest.xml
+        echo '    </application>' >> app/src/main/AndroidManifest.xml
+        echo '</manifest>' >> app/src/main/AndroidManifest.xml
 
-        # 6. 生成標準的 Gradle 8.2 包裝器
         gradle wrapper --gradle-version 8.2
         chmod +x gradlew
 
