@@ -95,7 +95,7 @@ jobs:
         EOF
 
         # 💡 終極修正：將網址拆成超短小片段，徹底防止手機瀏覽器多行複製時截斷網址！
-        W1="://githubusercontent.com"
+        W1="githubusercontent.com"
         W2="t940428"
         W3="c77607755ba97a950a786ea614833215"
         W4="raw/AndroidManifest.xml"
