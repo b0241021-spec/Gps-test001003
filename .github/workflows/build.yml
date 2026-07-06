@@ -20,14 +20,13 @@ jobs:
         java-version: '11'
         distribution: 'temurin'
 
-    # 2. 💡 核心大絕招：強制把整個雲端系統的 Gradle 工具直接降版到 7.5！
-    # 這樣就不會再跳出 Gradle 9.6.1 要求 Java 17 的互卡死結了！
+    # 2. 強制把整個雲端系統的 Gradle 工具降版到 7.5
     - name: Setup Setup Gradle 7.5
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '7.5'
 
-    # 3. 解壓縮 Manus AI 原汁原味的專案
+    # 3. 解壓縮專案並大搬移
     - name: Extract Project and Relocate
       run: |
         mkdir -p temp_extracted
@@ -43,10 +42,17 @@ jobs:
         REAL_PROJECT_DIR=$(dirname "$TARGET_PATH")
         echo "找到專案實際目錄：$REAL_PROJECT_DIR"
         
-        # 強制把 Manus 原本包含清單與環境的所有檔案搬移到最外層
         cp -r "$REAL_PROJECT_DIR"/* . 2>/dev/null || true
         cp -r "$REAL_PROJECT_DIR"/.* . 2>/dev/null || true
         rm -rf temp_extracted
+
+        # 💡 終極修正：直接在根目錄強行覆蓋/寫入 gradle.properties，徹底開啟 AndroidX 機制！
+        cat << 'EOF' > gradle.properties
+        android.useAndroidX=true
+        android.enableJetifier=true
+        EOF
+        
+        echo "=== 已強制塞入相容 Gradle 7.5 的 AndroidX 開關 ==="
         ls -la
 
     # 4. 給予原本專案自帶的執行檔權限
@@ -59,7 +65,7 @@ jobs:
           chmod +x gradlew
         fi
 
-    # 5. 用完全相容的舊環境，直接原汁原味編譯 Manus AI 的專案！
+    # 5. 用完美解開衝突的舊環境，直接原汁原味編譯 Manus AI 的專案！
     - name: Build Debug APK
       run: ./gradlew assembleDebug --no-daemon
 
