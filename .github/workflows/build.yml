@@ -13,14 +13,12 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    # 💡 核心修正：將 Java 版本從 17 降到 11，用來相容 Manus AI 的舊版插件配置
-    - name: Set up JDK 11
+    - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
-        java-version: '11'
+        java-version: '17'
         distribution: 'temurin'
 
-    # 2. 解壓縮並精準覆蓋檔案
     - name: Extract Project and Fix Path
       run: |
         mkdir -p temp_extracted
@@ -40,25 +38,32 @@ jobs:
         cp -r "$REAL_PROJECT_DIR"/* . 2>/dev/null || true
         cp -r "$REAL_PROJECT_DIR"/.* . 2>/dev/null || true
         rm -rf temp_extracted
-        ls -la
 
-    # 3. 在相容環境下自動修復 Gradle Wrapper 執行檔
+    # 💡 核心大絕招：用強大的 Linux 替換指令（sed），把專案 build.gradle 裡舊版的 7.x 或 4.x 插件，強行文字替換升級為適應 Java 17 的最新版本 8.2.2 
+    - name: Force Upgrade Android Plugin Version
+      run: |
+        if [ -f "build.gradle" ]; then
+          sed -i "s/com.android.tools.build:gradle:[^']*'/com.android.tools.build:gradle:8.2.2'/g" build.gradle
+          sed -i 's/id "com.android.application" version "[^"]*"/id "com.android.application" version "8.2.2"/g' build.gradle
+          sed -i "s/id 'com.android.application' version '[^']*'/id 'com.android.application' version '8.2.2'/g" build.gradle
+        fi
+        if [ -f "app/build.gradle" ]; then
+          sed -i "s/com.android.tools.build:gradle:[^']*'/com.android.tools.build:gradle:8.2.2'/g" app/build.gradle
+        fi
+        echo "=== 已強制完成 Android 編譯插件版本升級 ==="
+
     - name: Check and Prepare Executable
       run: |
         if [ -f "gradlew" ]; then
-          echo "偵測到專案自帶 gradlew，正在啟用..."
           chmod +x gradlew
         else
-          echo "專案未帶 gradlew，正在為其建立標準包裝器..."
-          gradle wrapper --gradle-version 7.5
+          gradle wrapper --gradle-version 8.2
           chmod +x gradlew
         fi
 
-    # 4. 開始線上打包 APK
     - name: Build Debug APK
       run: ./gradlew assembleDebug --no-daemon
 
-    # 5. 上傳最終產出的 APK 成果檔
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
