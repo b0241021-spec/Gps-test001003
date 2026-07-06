@@ -1,4 +1,4 @@
-name: Manus Project Auto Build
+name: Manus Native Auto Build
 
 on:
   push:
@@ -13,119 +13,59 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Set up JDK 17
+    # 1. 部署向下相容最強的 Java 11 環境
+    - name: Set up JDK 11
       uses: actions/setup-java@v4
       with:
-        java-version: '17'
+        java-version: '11'
         distribution: 'temurin'
 
-    - name: Generate Fresh Isolated Android Project
+    # 2. 💡 核心大絕招：強制把整個雲端系統的 Gradle 工具直接降版到 7.5！
+    # 這樣就不會再跳出 Gradle 9.6.1 要求 Java 17 的互卡死結了！
+    - name: Setup Setup Gradle 7.5
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '7.5'
+
+    # 3. 解壓縮 Manus AI 原汁原味的專案
+    - name: Extract Project and Relocate
       run: |
-        mkdir clean_project
-        cd clean_project
-        
-        cat << 'EOF' > settings.gradle
-        pluginManagement {
-            repositories {
-                google()
-                mavenCentral()
-                gradlePluginPortal()
-            }
-        }
-        dependencyResolutionManagement {
-            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-            repositories {
-                google()
-                mavenCentral()
-            }
-        }
-        rootProject.name = "ManusGpsApp"
-        include ':app'
-        EOF
-
-        cat << 'EOF' > gradle.properties
-        android.useAndroidX=true
-        android.enableJetifier=true
-        EOF
-
-        cat << 'EOF' > build.gradle
-        plugins {
-            id 'com.android.application' version '8.2.2' apply false
-            id 'org.jetbrains.kotlin.android' version '1.9.22' apply false
-        }
-        EOF
-
-        mkdir -p app/src/main/java/com/example/manusgps
-        mkdir -p app/src/main/res/layout
-
-        cat << 'EOF' > app/build.gradle
-        plugins {
-            id 'com.android.application'
-            id 'org.jetbrains.kotlin.android'
-        }
-        android {
-            namespace 'com.example.manusgps'
-            compileSdk 34
-            defaultConfig {
-                applicationId "com.example.manusgps"
-                minSdk 24
-                targetSdk 34
-                versionCode 1
-                versionName "1.0"
-            }
-            buildTypes {
-                release {
-                    minifyEnabled false
-                }
-            }
-            compileOptions {
-                sourceCompatibility JavaVersion.VERSION_17
-                targetCompatibility JavaVersion.VERSION_17
-            }
-            kotlinOptions {
-                jvmTarget = '17'
-            }
-        }
-        dependencies {
-            implementation 'androidx.core:core-ktx:1.12.0'
-            implementation 'androidx.appcompat:appcompat:1.6.1'
-            implementation 'com.google.android.material:material:1.11.0'
-            implementation 'com.google.android.gms:play-services-maps:18.2.0'
-        }
-        EOF
-
-        gradle wrapper --gradle-version 8.2
-        chmod +x gradlew
-
-    - name: Extract and Inject Core Code Only
-      run: |
-        # 💡 核心修改：直接複製剛剛手動在網頁上建立的、絕對無損的清單檔案到專案中
-        cp AndroidManifest.xml clean_project/app/src/main/AndroidManifest.xml
-
         mkdir -p temp_extracted
         unzip -q *.zip -d temp_extracted || true
+        rm -f *.zip
         
-        MAIN_KT=$(find temp_extracted -name "MainActivity.kt" -print -quit)
-        if [ ! -z "$MAIN_KT" ]; then
-            cp "$MAIN_KT" clean_project/app/src/main/java/com/example/manusgps/MainActivity.kt
-            sed -i 's/^package .*/package com.example.manusgps;/' clean_project/app/src/main/java/com/example/manusgps/MainActivity.kt
+        TARGET_PATH=$(find temp_extracted -name "settings.gradle" -print -quit)
+        if [ -z "$TARGET_PATH" ]; then
+          echo "錯誤：在 ZIP 壓縮檔內找不到 settings.gradle"
+          exit 1
         fi
+        
+        REAL_PROJECT_DIR=$(dirname "$TARGET_PATH")
+        echo "找到專案實際目錄：$REAL_PROJECT_DIR"
+        
+        # 強制把 Manus 原本包含清單與環境的所有檔案搬移到最外層
+        cp -r "$REAL_PROJECT_DIR"/* . 2>/dev/null || true
+        cp -r "$REAL_PROJECT_DIR"/.* . 2>/dev/null || true
+        rm -rf temp_extracted
+        ls -la
 
-        find temp_extracted -name "*.kt" ! -name "MainActivity.kt" -exec cp {} clean_project/app/src/main/java/com/example/manusgps/ \;
-        sed -i 's/^package .*/package com.example.manusgps;/' clean_project/app/src/main/java/com/example/manusgps/*.kt 2>/dev/null || true
-
-        MAIN_XML=$(find temp_extracted -name "activity_main.xml" -print -quit)
-        if [ ! -z "$MAIN_XML" ]; then
-            cp "$MAIN_XML" clean_project/app/src/main/res/layout/activity_main.xml
-        fi
-
-    - name: Build Debug APK in Clean Environment
+    # 4. 給予原本專案自帶的執行檔權限
+    - name: Prepare Executable
       run: |
-        cd clean_project
-        ./gradlew assembleDebug --no-daemon
+        if [ -f "gradlew" ]; then
+          chmod +x gradlew
+        else
+          gradle wrapper --gradle-version 7.5
+          chmod +x gradlew
+        fi
 
+    # 5. 用完全相容的舊環境，直接原汁原味編譯 Manus AI 的專案！
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug --no-daemon
+
+    # 6. 上傳最終產出的 APK 成果檔
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: Manus-GPS-App-APK
-        path: "clean_project/app/build/outputs/apk/debug/*.apk"
+        name: Manus-GPS-Native-APK
+        path: "**/build/outputs/apk/debug/*.apk"
