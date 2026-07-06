@@ -55,23 +55,34 @@ jobs:
         EOF
         cp app/src/main/res/mipmap-hdpi/ic_launcher.png app/src/main/res/mipmap-hdpi/ic_launcher_round.png
 
-        # 💡 終極大絕招：全域自動對齊 Kotlin 型態！
+        # 💡 智慧路徑追蹤與全域語法修正
         TARGET_KT=$(find . -name "MainActivity.kt" -print -quit)
         if [ ! -z "$TARGET_KT" ]; then
-          echo "正在對 $TARGET_KT 進行全域代碼語法修復..."
+          echo "=== 開始地毯式搜尋 SimulationState 的套件路徑 ==="
+          STATE_FILE=$(find . -name "*.kt" -exec grep -l "class SimulationState" {} + -print -quit)
           
-          # 1. 先在頂端補上可能缺少的各個路徑的 SimulationState 引入
-          sed -i '2i import com.gpssimulator.ui.SimulationState' "$TARGET_KT" 2>/dev/null || true
-          sed -i '2i import com.gpssimulator.SimulationState' "$TARGET_KT" 2>/dev/null || true
+          if [ ! -z "$STATE_FILE" ]; then
+            # 從該檔案的第一行抓出它的 package 名稱
+            DETECTED_PACKAGE=$(grep "^package " "$STATE_FILE" | head -n 1 | sed 's/package //;s/;//;s/ //g')
+            echo "成功找到 SimulationState 位於套件：$DETECTED_PACKAGE"
+            if [ ! -z "$DETECTED_PACKAGE" ]; then
+              sed -i "2i import ${DETECTED_PACKAGE}.SimulationState" "$TARGET_KT"
+            fi
+          else
+            # 如果是寫在同一個套件或同檔案內，嘗試盲補 MainActivity 本身的 package 路徑
+            MY_PACKAGE=$(grep "^package " "$TARGET_KT" | head -n 1 | sed 's/package //;s/;//;s/ //g')
+            if [ ! -z "$MY_PACKAGE" ]; then
+              sed -i "2i import ${MY_PACKAGE}.SimulationState" "$TARGET_KT"
+            fi
+          fi
           
-          # 2. 核心魔法：全域搜尋所有寫著 collect { 的地方，不管是哪一行，通通強行改寫為帶有明確 SimulationState 型態的正規語法！
-          # 這會把 collect { 變成 collect { state: SimulationState -> 或者是 collect { it: SimulationState ->
+          # 全域修正 collect 語法，補上明確型態
           sed -i 's/collect\s*{\s*$/collect { state: SimulationState ->/g' "$TARGET_KT"
           sed -i 's/collect\s*{\s*state\s*->/collect { state: SimulationState ->/g' "$TARGET_KT"
           sed -i 's/collect\s*{\s*it\s*->/collect { it: SimulationState ->/g' "$TARGET_KT"
         fi
 
-        echo "=== 桌面圖標與 Kotlin 全域語法修補完成 ==="
+        echo "=== 智慧套件追蹤與 Kotlin 全域語法修補完成 ==="
         ls -la
 
     - name: Prepare Executable
