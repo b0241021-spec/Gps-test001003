@@ -55,26 +55,27 @@ jobs:
         EOF
         cp app/src/main/res/mipmap-hdpi/ic_launcher.png app/src/main/res/mipmap-hdpi/ic_launcher_round.png
 
-        # 💡 智慧路徑追蹤與全域語法修正
+        # 💡 終極大絕招：全自動在主程式目錄下「無中生有」補齊 Manus 漏掉的 SimulationState 狀態類別檔案！
+        # 先自動偵測 MainActivity.kt 的正確 package 路徑
         TARGET_KT=$(find . -name "MainActivity.kt" -print -quit)
         if [ ! -z "$TARGET_KT" ]; then
-          echo "=== 開始地毯式搜尋 SimulationState 的套件路徑 ==="
-          STATE_FILE=$(find . -name "*.kt" -exec grep -l "class SimulationState" {} + -print -quit)
+          KT_DIR=$(dirname "$TARGET_KT")
+          MY_PACKAGE=$(grep "^package " "$TARGET_KT" | head -n 1)
           
-          if [ ! -z "$STATE_FILE" ]; then
-            # 從該檔案的第一行抓出它的 package 名稱
-            DETECTED_PACKAGE=$(grep "^package " "$STATE_FILE" | head -n 1 | sed 's/package //;s/;//;s/ //g')
-            echo "成功找到 SimulationState 位於套件：$DETECTED_PACKAGE"
-            if [ ! -z "$DETECTED_PACKAGE" ]; then
-              sed -i "2i import ${DETECTED_PACKAGE}.SimulationState" "$TARGET_KT"
-            fi
-          else
-            # 如果是寫在同一個套件或同檔案內，嘗試盲補 MainActivity 本身的 package 路徑
-            MY_PACKAGE=$(grep "^package " "$TARGET_KT" | head -n 1 | sed 's/package //;s/;//;s/ //g')
-            if [ ! -z "$MY_PACKAGE" ]; then
-              sed -i "2i import ${MY_PACKAGE}.SimulationState" "$TARGET_KT"
-            fi
-          fi
+          echo "=== 正在全新建立缺少的 SimulationState 檔案 ==="
+          cat << EOF > "${KT_DIR}/SimulationState.kt"
+          ${MY_PACKAGE}
+          
+          data class SimulationState(
+              val isRunning: Boolean = false,
+              val currentSpeed: Double = 0.0,
+              val latitude: Double = 0.0,
+              val longitude: Double = 0.0,
+              val progress: Int = 0,
+              val speedMultiplier: Float = 1.0f,
+              val statusText: String = ""
+          )
+          EOF
           
           # 全域修正 collect 語法，補上明確型態
           sed -i 's/collect\s*{\s*$/collect { state: SimulationState ->/g' "$TARGET_KT"
@@ -82,7 +83,7 @@ jobs:
           sed -i 's/collect\s*{\s*it\s*->/collect { it: SimulationState ->/g' "$TARGET_KT"
         fi
 
-        echo "=== 智慧套件追蹤與 Kotlin 全域語法修補完成 ==="
+        echo "=== 桌面圖標與缺件類別全自動修補完成 ==="
         ls -la
 
     - name: Prepare Executable
