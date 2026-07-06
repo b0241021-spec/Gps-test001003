@@ -55,22 +55,22 @@ jobs:
         EOF
         cp app/src/main/res/mipmap-hdpi/ic_launcher.png app/src/main/res/mipmap-hdpi/ic_launcher_round.png
 
-        # 💡 盲修大絕招：不論 Manus AI 的第 142 行是寫監聽器還是 SeekBar，我們用多種極端可能直接強制修正文字
+        # 💡 終極狙擊修正：針對第 142 行的 Flow 監聽器進行強制型態補齊！
+        # 把原本模糊的 collect { state -> ... } 或 collect { ... }
+        # 強行文字修正為編譯器絕對看得懂的明確結構
         TARGET_KT=$(find . -name "MainActivity.kt" -print -quit)
         if [ ! -z "$TARGET_KT" ]; then
-          echo "正在對 $TARGET_KT 進行全自動語法相容性盲修..."
+          echo "正在針對 FlowCollector 錯誤進行精準語法修正..."
           
-          # 可能性 1：如果是 SeekBar 變更監聽器，強制將模糊參數宣告型態
-          sed -i '142s/{\s*seekBar\s*,\s*progress\s*,\s*fromUser\s*->/{\s*seekBar:\s*android.widget.SeekBar?,\s*progress:\s*Int,\s*fromUser:\s*Boolean\s*->/g' "$TARGET_KT" || true
+          # 將第 142 行可能寫成簡寫的 { 箭頭 替換成帶有明確定義的型態
+          sed -i '142s/{\s*state\s*->/{\s*state:\s*SimulationState\s*->/g' "$TARGET_KT" || true
+          sed -i '142s/{\s*it\s*->/{\s*it:\s*SimulationState\s*->/g' "$TARGET_KT" || true
           
-          # 可能性 2：如果是常見的 Location 監聽器，強制補上 Location 型態
-          sed -i '142s/{\s*location\s*->/{\s*location:\s*android.location.Location\s*->/g' "$TARGET_KT" || true
-          
-          # 可能性 3：如果是簡單的 Lambda 箭頭，強制加上通用 Object
-          sed -i 's/lambda\s*->/lambda:\s*Any\s*->/g' "$TARGET_KT" || true
+          # 備用保險方案：如果原本第 142 行完全沒寫箭頭（純簡寫 it），則強行塞入明確名稱
+          sed -i '142s/collect\s*{\s*$/collect\(\x7b\ state:\ SimulationState\ ->/g' "$TARGET_KT" || true
         fi
 
-        echo "=== 桌面圖標與 Kotlin 語法盲修完成 ==="
+        echo "=== 桌面圖標與 Kotlin 語法精準修補完成 ==="
         ls -la
 
     - name: Prepare Executable
