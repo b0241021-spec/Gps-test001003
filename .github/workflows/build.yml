@@ -94,10 +94,9 @@ jobs:
         }
         EOF
 
-        # 💡 終極大絕招：使用完全不帶引號的 Base64 密碼，強行在雲端解密還原出 100% 完美的 AndroidManifest.xml
+        # 💡 核心修正：將 Base64 密碼合為單一長行，徹底解決 invalid input 錯誤！
         echo "PG1hbmlmZXN0IHhtbG5zOmFuZHJvaWQ9Imh0dHA6Ly9zY2hlbWFzLmFuZHJvaWQuY29tL2Fway9yZXMvYW5kcm9pZCI+CiAgICA8dXNlcy1wZXJtaXNzaW9uIGFuZHJvaWQ6bmFtZT0iYW5kcm9pZC5wZXJtaXNzaW9uLkFDQ0VTU19GSU5FX0xPQ0FUSU9OIiAvPgogICAgPHVzZXMtcGVybWlzc2lvbiBhbmRyb2lkOm5hbWU9ImFuZHJvaWQucGVybWlzc2lvbi5BQ0NFU1NfQ09BUlNFX0xPQ0FUSU9OIiAvPgogICAgPHVzZXMtcGVybWlzc2lvbiBhbmRyb2lkOm5hbWU9ImFuZHJvaWQucGVybWlzc2lvbi5JTlRFUk5FVCIgLz4KICAgIDxhcHBsaWNhdGlvbgogICAgICAgIGFuZHJvaWQ6YWxsb3dCYWNrdXA9InRydWUiCiAgICAgICAgYW5kcm9pZDpsYWJlbD0iTWFudXMgR1BTIEFwcCIKICAgICAgICBhZHJvaWQ6dGhlbWU9IkBzdHlsZS9UaGVtZS5BcHBDb21wYXQuTGlnaHQuTm9BY3Rpb24iPgogICAgICAgIDxhY3Rpdml0eQogICAgICAgICAgICBhZHJvaWQ6bmFtZT0iLm1haW5hY3Rpdml0eS5NYWluQWN0aXZpdHkiCiAgICAgICAgICAgIGFuZHJvaWQ6ZXhwb3J0ZWQ9InRydWUiPgogICAgICAgICAgICA8aW50ZW50LWZpbHRlcj4KICAgICAgICAgICAgICAgIDxhY3Rpb24gYW5kcm9pZDpubYW1lPSJhbmRyb2lkLmludGVudC5hY3Rpb24uTUFJTiIgLz4KICAgICAgICAgICAgICAgIDxjYXRlZ29yeSBhbmRyb2lkOm5hbWU9ImFuZHJvaWQuaW50ZW50LmNhdGVnb3J5LkxBVU5DSEVSIiAvPgogICAgICAgICAgICA8L2ludGVudC1maWx0ZXI+CiAgICAgICAgPC9hY3Rpdml0eT4KICAgIDwvYXBwbGljYXRpb24+CjwvbWFuaWZlc3Q+" | base64 -d > app/src/main/AndroidManifest.xml
 
-        # 💡 檢查還原結果，確保雙引號完好如初
         echo "=== 檢查解密後的清單檔案 ==="
         cat app/src/main/AndroidManifest.xml
 
@@ -112,7 +111,6 @@ jobs:
         MAIN_KT=$(find temp_extracted -name "MainActivity.kt" -print -quit)
         if [ ! -z "$MAIN_KT" ]; then
             cp "$MAIN_KT" clean_project/app/src/main/java/com/example/manusgps/MainActivity.kt
-            # 💡 自動校正套件名稱
             sed -i 's/^package .*/package com.example.manusgps;/' clean_project/app/src/main/java/com/example/manusgps/MainActivity.kt
         fi
 
