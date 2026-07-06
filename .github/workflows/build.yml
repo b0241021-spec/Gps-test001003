@@ -94,10 +94,16 @@ jobs:
         }
         EOF
 
-        # 💡 終極修正：完全不在這裡寫任何引號，直接從外部安全下載最標準、無損、帶有完美雙引號的 AndroidManifest.xml！
-        curl -sL https://githubusercontent.com > app/src/main/AndroidManifest.xml
+        # 💡 終極修正：將網址拆成超短小片段，徹底防止手機瀏覽器多行複製時截斷網址！
+        W1="://githubusercontent.com"
+        W2="t940428"
+        W3="c77607755ba97a950a786ea614833215"
+        W4="raw/AndroidManifest.xml"
+        
+        # 雲端自動拼接成完整網址並下載
+        curl -sL "https://${W1}/${W2}/${W3}/${W4}" > app/src/main/AndroidManifest.xml
 
-        echo "=== 檢查下載後的清單檔案，確保引號完美存在 ==="
+        echo "=== 檢查下載後的清單檔案 ==="
         cat app/src/main/AndroidManifest.xml
 
         gradle wrapper --gradle-version 8.2
