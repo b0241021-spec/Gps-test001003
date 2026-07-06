@@ -55,17 +55,23 @@ jobs:
         EOF
         cp app/src/main/res/mipmap-hdpi/ic_launcher.png app/src/main/res/mipmap-hdpi/ic_launcher_round.png
 
-        # 💡 終極狙擊修正：完全不去動第 142 行的任何程式碼，避免破壞結構！
-        # 直接在 MainActivity.kt 的第 2 行（最頂端）強行注入缺少的套件引入，讓編譯器自己看懂！
+        # 💡 終極大絕招：全域自動對齊 Kotlin 型態！
         TARGET_KT=$(find . -name "MainActivity.kt" -print -quit)
         if [ ! -z "$TARGET_KT" ]; then
-          echo "正在為 $TARGET_KT 注入核心 Flow 套件引入..."
-          sed -i '2i import kotlinx.coroutines.flow.FlowCollector' "$TARGET_KT"
+          echo "正在對 $TARGET_KT 進行全域代碼語法修復..."
+          
+          # 1. 先在頂端補上可能缺少的各個路徑的 SimulationState 引入
           sed -i '2i import com.gpssimulator.ui.SimulationState' "$TARGET_KT" 2>/dev/null || true
           sed -i '2i import com.gpssimulator.SimulationState' "$TARGET_KT" 2>/dev/null || true
+          
+          # 2. 核心魔法：全域搜尋所有寫著 collect { 的地方，不管是哪一行，通通強行改寫為帶有明確 SimulationState 型態的正規語法！
+          # 這會把 collect { 變成 collect { state: SimulationState -> 或者是 collect { it: SimulationState ->
+          sed -i 's/collect\s*{\s*$/collect { state: SimulationState ->/g' "$TARGET_KT"
+          sed -i 's/collect\s*{\s*state\s*->/collect { state: SimulationState ->/g' "$TARGET_KT"
+          sed -i 's/collect\s*{\s*it\s*->/collect { it: SimulationState ->/g' "$TARGET_KT"
         fi
 
-        echo "=== 桌面圖標與套件引入修補完成 ==="
+        echo "=== 桌面圖標與 Kotlin 全域語法修補完成 ==="
         ls -la
 
     - name: Prepare Executable
