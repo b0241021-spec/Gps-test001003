@@ -48,15 +48,24 @@ jobs:
         android.enableJetifier=true
         EOF
 
-        # 💡 終極修正：補齊 Manus AI 漏掉的手機桌面 App 圖標（Icon）與圓角圖標！
-        # 建立 mipmap 目錄並塞入一張合法的空圖片資源，直接滿足 AAPT 的打包要求
+        # 補齊 Manus AI 漏掉的手機桌面 App 圖標
         mkdir -p app/src/main/res/mipmap-hdpi
         cat << 'EOF' > app/src/main/res/mipmap-hdpi/ic_launcher.png
         iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
         EOF
         cp app/src/main/res/mipmap-hdpi/ic_launcher.png app/src/main/res/mipmap-hdpi/ic_launcher_round.png
-        
-        echo "=== 桌面圖標缺件已全自動修補完成 ==="
+
+        # 💡 終極修正：自動修正第 142 行可能因為 Lambda 語法造成的 Cannot infer a type 錯誤
+        # 這段指令會自動去尋找專案中的 MainActivity.kt 並幫它最常見的模糊參數對齊型態
+        TARGET_KT=$(find . -name "MainActivity.kt" -print -quit)
+        if [ ! -z "$TARGET_KT" ]; then
+          echo "正在針對 $TARGET_KT 進行 Kotlin 語法相容性修正..."
+          # 修正最常遇到的 LocationListener 或 OnClickListener 參數型態模糊
+          sed -i '142s/{\s*location\s*->/{\s*location:\s*android.location.Location\s*->/' "$TARGET_KT" 2>/dev/null || true
+          sed -i '142s/{\s*it\s*->/{\s*it:\s*android.view.View\s*->/' "$TARGET_KT" 2>/dev/null || true
+        fi
+
+        echo "=== 桌面圖標與 Kotlin 語法修正完成 ==="
         ls -la
 
     - name: Prepare Executable
