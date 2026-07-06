@@ -1,0 +1,66 @@
+name: Manus Project Auto Build
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    # 💡 核心修正：將 Java 版本從 17 降到 11，用來相容 Manus AI 的舊版插件配置
+    - name: Set up JDK 11
+      uses: actions/setup-java@v4
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+
+    # 2. 解壓縮並精準覆蓋檔案
+    - name: Extract Project and Fix Path
+      run: |
+        mkdir -p temp_extracted
+        unzip -q *.zip -d temp_extracted || true
+        rm -f *.zip
+        
+        TARGET_PATH=$(find temp_extracted -name "settings.gradle" -print -quit)
+        
+        if [ -z "$TARGET_PATH" ]; then
+          echo "錯誤：在 ZIP 壓縮檔內找不到 settings.gradle"
+          exit 1
+        fi
+        
+        REAL_PROJECT_DIR=$(dirname "$TARGET_PATH")
+        echo "找到專案實際目錄：$REAL_PROJECT_DIR"
+        
+        cp -r "$REAL_PROJECT_DIR"/* . 2>/dev/null || true
+        cp -r "$REAL_PROJECT_DIR"/.* . 2>/dev/null || true
+        rm -rf temp_extracted
+        ls -la
+
+    # 3. 在相容環境下自動修復 Gradle Wrapper 執行檔
+    - name: Check and Prepare Executable
+      run: |
+        if [ -f "gradlew" ]; then
+          echo "偵測到專案自帶 gradlew，正在啟用..."
+          chmod +x gradlew
+        else
+          echo "專案未帶 gradlew，正在為其建立標準包裝器..."
+          gradle wrapper --gradle-version 7.5
+          chmod +x gradlew
+        fi
+
+    # 4. 開始線上打包 APK
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug --no-daemon
+
+    # 5. 上傳最終產出的 APK 成果檔
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Manus-GPS-App-APK
+        path: "**/build/outputs/apk/debug/*.apk"
