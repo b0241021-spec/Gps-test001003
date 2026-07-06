@@ -19,13 +19,12 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # 💡 終極修正：建立一個完全乾淨的 clean_project 資料夾，在裡面生成一整套全新的、保證適應 Java 17 的 Android 骨架
     - name: Generate Fresh Isolated Android Project
       run: |
         mkdir clean_project
         cd clean_project
         
-        # 1. 建立全新的基礎 settings.gradle
+        # 1. 建立 settings.gradle
         cat << 'EOF' > settings.gradle
         pluginManagement {
             repositories {
@@ -45,7 +44,13 @@ jobs:
         include ':app'
         EOF
 
-        # 2. 建立全新的根目錄 build.gradle (指定最新的相容版本)
+        # 💡 核心修正：建立 gradle.properties 並強制啟用 AndroidX 支援功能！
+        cat << 'EOF' > gradle.properties
+        android.useAndroidX=true
+        android.enableJetifier=true
+        EOF
+
+        # 2. 建立根目錄 build.gradle
         cat << 'EOF' > build.gradle
         plugins {
             id 'com.android.application' version '8.2.2' apply false
@@ -57,7 +62,7 @@ jobs:
         mkdir -p app/src/main/java/com/example/manusgps
         mkdir -p app/src/main/res/layout
 
-        # 4. 建立全新的 app/build.gradle
+        # 4. 建立 app/build.gradle
         cat << 'EOF' > app/build.gradle
         plugins {
             id 'com.android.application'
@@ -94,7 +99,7 @@ jobs:
         }
         EOF
 
-        # 5. 建立全新的 AndroidManifest.xml 清單
+        # 5. 建立 AndroidManifest.xml
         cat << 'EOF' > app/src/main/AndroidManifest.xml
         <manifest xmlns:android="http://android.com">
             <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -120,38 +125,30 @@ jobs:
         gradle wrapper --gradle-version 8.2
         chmod +x gradlew
 
-    # 💡 💡 終極修正：解壓 Manus AI 的 ZIP 檔，不碰任何它的設定檔，只單純把它寫的程式原始碼強行複製到新專案中
     - name: Extract and Inject Core Code Only
       run: |
         mkdir -p temp_extracted
         unzip -q *.zip -d temp_extracted || true
         
-        echo "=== 正在地毯式尋找並抽離核心程式碼 ==="
-        
-        # 尋找 MainActivity.kt 並注入，同時強制校正其套件名稱避免打架
         MAIN_KT=$(find temp_extracted -name "MainActivity.kt" -print -quit)
         if [ ! -z "$MAIN_KT" ]; then
             cp "$MAIN_KT" clean_project/app/src/main/java/com/example/manusgps/MainActivity.kt
             sed -i 's/^package .*/package com.example.manusgps;/' clean_project/app/src/main/java/com/example/manusgps/MainActivity.kt
         fi
 
-        # 尋找其他可能存在的 Kotlin 輔助程式碼一同注入，並全部校正套件名稱
         find temp_extracted -name "*.kt" ! -name "MainActivity.kt" -exec cp {} clean_project/app/src/main/java/com/example/manusgps/ \;
         sed -i 's/^package .*/package com.example.manusgps;/' clean_project/app/src/main/java/com/example/manusgps/*.kt 2>/dev/null || true
 
-        # 尋找介面佈局 XML 檔並注入
         MAIN_XML=$(find temp_extracted -name "activity_main.xml" -print -quit)
         if [ ! -z "$MAIN_XML" ]; then
             cp "$MAIN_XML" clean_project/app/src/main/res/layout/activity_main.xml
         fi
 
-    # 3. 進入完全乾淨、隔離的新目錄進行打包
     - name: Build Debug APK in Clean Environment
       run: |
         cd clean_project
         ./gradlew assembleDebug --no-daemon
 
-    # 4. 上傳最終產出的 APK 成果檔
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
