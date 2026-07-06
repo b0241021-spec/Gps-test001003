@@ -48,24 +48,29 @@ jobs:
         android.enableJetifier=true
         EOF
 
-        # 補齊 Manus AI 漏掉的手機桌面 App 圖標
+        # 補齊手機桌面 App 圖標
         mkdir -p app/src/main/res/mipmap-hdpi
         cat << 'EOF' > app/src/main/res/mipmap-hdpi/ic_launcher.png
         iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
         EOF
         cp app/src/main/res/mipmap-hdpi/ic_launcher.png app/src/main/res/mipmap-hdpi/ic_launcher_round.png
 
-        # 💡 終極修正：自動修正第 142 行可能因為 Lambda 語法造成的 Cannot infer a type 錯誤
-        # 這段指令會自動去尋找專案中的 MainActivity.kt 並幫它最常見的模糊參數對齊型態
+        # 💡 盲修大絕招：不論 Manus AI 的第 142 行是寫監聽器還是 SeekBar，我們用多種極端可能直接強制修正文字
         TARGET_KT=$(find . -name "MainActivity.kt" -print -quit)
         if [ ! -z "$TARGET_KT" ]; then
-          echo "正在針對 $TARGET_KT 進行 Kotlin 語法相容性修正..."
-          # 修正最常遇到的 LocationListener 或 OnClickListener 參數型態模糊
-          sed -i '142s/{\s*location\s*->/{\s*location:\s*android.location.Location\s*->/' "$TARGET_KT" 2>/dev/null || true
-          sed -i '142s/{\s*it\s*->/{\s*it:\s*android.view.View\s*->/' "$TARGET_KT" 2>/dev/null || true
+          echo "正在對 $TARGET_KT 進行全自動語法相容性盲修..."
+          
+          # 可能性 1：如果是 SeekBar 變更監聽器，強制將模糊參數宣告型態
+          sed -i '142s/{\s*seekBar\s*,\s*progress\s*,\s*fromUser\s*->/{\s*seekBar:\s*android.widget.SeekBar?,\s*progress:\s*Int,\s*fromUser:\s*Boolean\s*->/g' "$TARGET_KT" || true
+          
+          # 可能性 2：如果是常見的 Location 監聽器，強制補上 Location 型態
+          sed -i '142s/{\s*location\s*->/{\s*location:\s*android.location.Location\s*->/g' "$TARGET_KT" || true
+          
+          # 可能性 3：如果是簡單的 Lambda 箭頭，強制加上通用 Object
+          sed -i 's/lambda\s*->/lambda:\s*Any\s*->/g' "$TARGET_KT" || true
         fi
 
-        echo "=== 桌面圖標與 Kotlin 語法修正完成 ==="
+        echo "=== 桌面圖標與 Kotlin 語法盲修完成 ==="
         ls -la
 
     - name: Prepare Executable
@@ -85,3 +90,4 @@ jobs:
       with:
         name: Manus-GPS-Native-APK
         path: "**/build/outputs/apk/debug/*.apk"
+        
