@@ -94,25 +94,27 @@ jobs:
         }
         EOF
 
-        # 💡 核心修正：重新修正清單內部的 android:name 語法，確保其不被 GitHub 的引號功能吃掉
-        echo '<manifest xmlns:android="http://android.com">' > app/src/main/AndroidManifest.xml
-        echo '    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />' >> app/src/main/AndroidManifest.xml
-        echo '    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />' >> app/src/main/AndroidManifest.xml
-        echo '    <uses-permission android:name="android.permission.INTERNET" />' >> app/src/main/AndroidManifest.xml
-        echo '    <application' >> app/src/main/AndroidManifest.xml
-        echo '        android:allowBackup="true"' >> app/src/main/AndroidManifest.xml
-        echo '        android:label="Manus GPS App"' >> app/src/main/AndroidManifest.xml
-        echo '        android:theme="@style/Theme.AppCompat.Light.NoActionBar">' >> app/src/main/AndroidManifest.xml
-        echo '        <activity' >> app/src/main/AndroidManifest.xml
-        echo '            android:name=".MainActivity"' >> app/src/main/AndroidManifest.xml
-        echo '            android:exported="true">' >> app/src/main/AndroidManifest.xml
-        echo '            <intent-filter>' >> app/src/main/AndroidManifest.xml
-        echo '                <action android:name="android.intent.action.MAIN" />' >> app/src/main/AndroidManifest.xml
-        echo '                <category android:name="android.intent.category.LAUNCHER" />' >> app/src/main/AndroidManifest.xml
-        echo '            </intent-filter>' >> app/src/main/AndroidManifest.xml
-        echo '        </activity>' >> app/src/main/AndroidManifest.xml
-        echo '    </application>' >> app/src/main/AndroidManifest.xml
-        echo '</manifest>' >> app/src/main/AndroidManifest.xml
+        # 💡 終極修正：改用 cat << 'EOF' 區塊寫入，並將所有引號換成單引號，徹底杜絕被系統吃掉的問題！
+        cat << 'EOF' > app/src/main/AndroidManifest.xml
+        <manifest xmlns:android='http://android.com'>
+            <uses-permission android:name='android.permission.ACCESS_FINE_LOCATION' />
+            <uses-permission android:name='android.permission.ACCESS_COARSE_LOCATION' />
+            <uses-permission android:name='android.permission.INTERNET' />
+            <application
+                android:allowBackup='true'
+                android:label='Manus GPS App'
+                android:theme='@style/Theme.AppCompat.Light.NoActionBar'>
+                <activity
+                    android:name='.MainActivity'
+                    android:exported='true'>
+                    <intent-filter>
+                        <action android:name='android.intent.action.MAIN' />
+                        <category android:name='android.intent.category.LAUNCHER' />
+                    </intent-filter>
+                </activity>
+            </application>
+        </manifest>
+        EOF
 
         gradle wrapper --gradle-version 8.2
         chmod +x gradlew
