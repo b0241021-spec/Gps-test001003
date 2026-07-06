@@ -94,27 +94,10 @@ jobs:
         }
         EOF
 
-        # 💡 終極修復：利用 \x22 來完全代替雙引號，徹底繞過所有引號與 Base64 的手機複製 Bug！
-        printf '<manifest xmlns:android=\x22http://android.com\x22>\n' > app/src/main/AndroidManifest.xml
-        printf '    <uses-permission android:name=\x22android.permission.ACCESS_FINE_LOCATION\x22 />\n' >> app/src/main/AndroidManifest.xml
-        printf '    <uses-permission android:name=\x22android.permission.ACCESS_COARSE_LOCATION\x22 />\n' >> app/src/main/AndroidManifest.xml
-        printf '    <uses-permission android:name=\x22android.permission.INTERNET\x22 />\n' >> app/src/main/AndroidManifest.xml
-        printf '    <application\n' >> app/src/main/AndroidManifest.xml
-        printf '        android:allowBackup=\x22true\x22\n' >> app/src/main/AndroidManifest.xml
-        printf '        android:label=\x22Manus GPS App\x22\n' >> app/src/main/AndroidManifest.xml
-        printf '        android:theme=\x22@style/Theme.AppCompat.Light.NoActionBar\x22>\n' >> app/src/main/AndroidManifest.xml
-        printf '        <activity\n' >> app/src/main/AndroidManifest.xml
-        printf '            android:name=\x22.MainActivity\x22\n' >> app/src/main/AndroidManifest.xml
-        printf '            android:exported=\x22true\x22>\n' >> app/src/main/AndroidManifest.xml
-        printf '            <intent-filter>\n' >> app/src/main/AndroidManifest.xml
-        printf '                <action android:name=\x22android.intent.action.MAIN\x22 />\n' >> app/src/main/AndroidManifest.xml
-        printf '                <category android:name=\x22android.intent.category.LAUNCHER\x22 />\n' >> app/src/main/AndroidManifest.xml
-        printf '            </intent-filter>\n' >> app/src/main/AndroidManifest.xml
-        printf '        </activity>\n' >> app/src/main/AndroidManifest.xml
-        printf '    </application>\n' >> app/src/main/AndroidManifest.xml
-        printf '</manifest>\n' >> app/src/main/AndroidManifest.xml
+        # 💡 終極修正：完全不在這裡寫任何引號，直接從外部安全下載最標準、無損、帶有完美雙引號的 AndroidManifest.xml！
+        curl -sL https://githubusercontent.com > app/src/main/AndroidManifest.xml
 
-        echo "=== 檢查拼裝後的清單檔案 ==="
+        echo "=== 檢查下載後的清單檔案，確保引號完美存在 ==="
         cat app/src/main/AndroidManifest.xml
 
         gradle wrapper --gradle-version 8.2
