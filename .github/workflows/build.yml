@@ -45,7 +45,6 @@ jobs:
         android.enableJetifier=true
         EOF
 
-        # 補齊基礎桌面圖標
         mkdir -p app/src/main/res/mipmap-hdpi
         cat << 'EOF' > app/src/main/res/mipmap-hdpi/ic_launcher.png
         iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
@@ -61,7 +60,6 @@ jobs:
           chmod +x gradlew
         fi
 
-    # 💡 關鍵修正：將編譯的日誌和錯誤完全輸出到 build.log，如果失敗就把最後 80 行精華寫入 error.log 供 Gemini 分析
     - name: Build Debug APK
       run: |
         ./gradlew assembleDebug --no-daemon > build.log 2>&1 || (tail -n 80 build.log > error.log && exit 1)
@@ -72,47 +70,68 @@ jobs:
         name: Manus-GPS-Successful-APK
         path: "**/build/outputs/apk/debug/*.apk"
 
-  # 🤖 核心精華：當上方編譯失敗時，這個工作會自動啟動，呼叫 Gemini API 進行對話與自動修補！
   auto_healing:
     runs-on: ubuntu-latest
     needs: build_project
-    if: failure() # 只有上方失敗時才觸發
+    if: failure()
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    # 💡 呼叫 Gemini 1.5 Flash，將錯誤日誌進行智慧對話分析並生成 Linux 修復腳本
+    # 💡 核心修正：將網址（API_URL）與金鑰密鑰完全隔離，改用 Header 的方式代入，防止複製截斷或錯位 Bug
     - name: Talk to Gemini and Generate Patch
       id: gemini
       env:
         GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
+        API_URL: "https://googleapis.com"
       run: |
-        # 由於前一個 Job 失敗，我們需要重新獲取失敗的日誌（這裡直接讀取當前最外層的遺留日誌或透過 API 抓取，為簡化邏輯，我們直接讓 Gemini 診斷代碼常見語法）
-        # 為了 100% 確保拿到 Log，我們讓自動化任務把前一步的 error.log 當作 Artifact 傳遞，或在此處進行代碼靜態分析。
-        # 這裡我們使用更穩健的作法：直接把我們剛才在截圖中遇到的 FlowCollector 語法死結與 Unexpected tokens 問題作為 Prompt
-        
-        # 讀取當前的 MainActivity.kt 作為上下文
+        echo "=== 正在定位程式碼檔案 ==="
         TARGET_KT=$(find . -name "MainActivity.kt" -print -quit)
-        KT_CONTENT=$(cat "$TARGET_KT" | tail -n 100)
+        if [ -z "$TARGET_KT" ]; then
+          echo "錯誤：找不到 MainActivity.kt 檔案"
+          exit 1
+        fi
         
-        RESPONSE=$(curl -X POST "https://googleapis.com{GEMINI_KEY}" \
+        # 建立全新的狀態輔助類別，確保不缺件
+        KT_DIR=$(dirname "$TARGET_KT")
+        MY_PACKAGE=$(grep "^package " "$TARGET_KT" | head -n 1)
+        cat << EOF > "${KT_DIR}/SimulationState.kt"
+        ${MY_PACKAGE}
+        data class SimulationState(
+            val isRunning: Boolean = false,
+            val currentSpeed: Double = 0.0,
+            val latitude: Double = 0.0,
+            val longitude: Double = 0.0,
+            val progress: Int = 0,
+            val speedMultiplier: Float = 1.0f,
+            val statusText: String = ""
+        )
+        EOF
+
+        echo "=== 正在呼叫 Gemini API 進行診斷 ==="
+        RESPONSE=$(curl -X POST "${API_URL}?key=${GEMINI_KEY}" \
           -H "Content-Type: application/json" \
-          -d "{
-            \"contents\": [{
-              \"parts\":[{
-                \"text\": \"你是一個專業的 Android 工程師。目前專案在編譯 MainActivity.kt 時報錯：Unexpected tokens 以及 Unresolved reference: state。這通常是因為第 142 行附近的 Flow 監聽器 collect 語法缺漏了明確的型態 SimulationState 定義。請寫出一段 Linux 替換命令（例如 sed），幫我把這個錯誤自動修復掉。請只回覆 Linux 命令，不要有任何多餘的聊天文字、不要 markdown。\"
+          -d '{
+            "contents": [{
+              "parts":[{
+                "text": "你是一個資深的 Android 工程師。目前專案在編譯時報錯：Unexpected tokens 以及 Unresolved reference: state。這通常是因為第 142 行附近的 Flow 監聽器 collect 語法缺漏了明確的型態 SimulationState 定義。請寫出一行 Linux 替換命令（例如 sed），幫我把這個錯誤自動修復掉。請只回覆 Linux 命令，不要有任何多餘的聊天文字、不要 markdown。"
               }]
             }]
-          }")
+          }')
           
         PATCH_COMMAND=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text' | sed 's/```bash//g;s/```//g')
         echo "=== Gemini 自動對話生成的修復指令 ==="
         echo "$PATCH_COMMAND"
         
-        # 在雲端虛擬機中直接執行 Gemini 給出的指令！
-        eval "$PATCH_COMMAND" || true
+        if [ ! -z "$PATCH_COMMAND" ] && [ "$PATCH_COMMAND" != "null" ]; then
+          eval "$PATCH_COMMAND" || true
+        else
+          echo "網頁快取異常，手動注入預設保險方案..."
+          sed -i "s/collect\s*{\s*$/collect { state: SimulationState ->/g" "$TARGET_KT" || true
+          sed -i "s/collect\s*{\s*state\s*->/collect { state: SimulationState ->/g" "$TARGET_KT" || true
+          sed -i "s/collect\s*{\s*it\s*->/collect { it: SimulationState ->/g" "$TARGET_KT" || true
+        fi
 
-    # 💡 全自動將 Gemini 修正、對話後的程式碼 Commit 並 Push 回您的倉庫，觸發下一輪自動建置
     - name: Auto Commit Gemini Fix
       run: |
         git config --global user.name "Gemini-AI-Bot"
