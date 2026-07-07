@@ -78,7 +78,6 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    # 💡 核心修正：在 Gemini 任務內也同步進行解壓縮與檔案歸位，確保可以 100% 定位到 MainActivity.kt！
     - name: Extract Project For Gemini
       run: |
         mkdir -p temp_extracted
@@ -105,7 +104,6 @@ jobs:
           exit 1
         fi
         
-        # 建立全新的狀態輔助類別，確保不缺件
         KT_DIR=$(dirname "$TARGET_KT")
         MY_PACKAGE=$(grep "^package " "$TARGET_KT" | head -n 1)
         cat << EOF > "${KT_DIR}/SimulationState.kt"
@@ -132,7 +130,7 @@ jobs:
             }]
           }')
           
-        PATCH_COMMAND=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text' | sed 's/```bash//g;s/```//g')
+        PATCH_COMMAND=$(echo "$RESPONSE" | jq -r '.candidates.content.parts.text' | sed 's/```bash//g;s/```//g')
         echo "=== Gemini 自動對話生成的修復指令 ==="
         echo "$PATCH_COMMAND"
         
@@ -145,10 +143,11 @@ jobs:
           sed -i "s/collect\s*{\s*it\s*->/collect { it: SimulationState ->/g" "$TARGET_KT" || true
         fi
 
+    # 💡 核心大絕招：加入 --force 參數，強制將 Gemini 修復好、包含了圖標與屬性的代碼大覆蓋上傳！
     - name: Auto Commit Gemini Fix
       run: |
         git config --global user.name "Gemini-AI-Bot"
         git config --global user.email "gemini-bot@github.com"
         git add .
         git commit -m "🤖 Gemini AI 全自動自我修復 Kotlin 語法錯誤" || exit 0
-        git push
+        git push --force
