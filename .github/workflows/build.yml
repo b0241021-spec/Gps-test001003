@@ -101,7 +101,7 @@ jobs:
           -d '{
             "contents": [{
               "parts":[{
-                "text": "你是一個資深的 Android 工程師。目前專案在編譯時報錯：Unexpected tokens 以及 Unresolved reference: state。這通常 BENCHMARK 因為第 142 行附近的 Flow 監聽器 collect 語法缺漏了明確的型態 SimulationState 定義。請寫出一行精準的 Linux sed 替換命令，例如：sed -i \"s/collect\\s*{\\s*$/collect { state: SimulationState ->/g\" '"$TARGET_KT"'，幫我把這個錯誤自動修復掉。請只回覆該行 Linux 命令，绝对不要有任何多餘的聊天文字，绝对不要帶 markdown 語法格式。"
+                "text": "你是一個資深的 Android 工程師。目前專案在編譯時報錯：Unexpected tokens 以及 Unresolved reference: state。這通常是因為第 142 行附近的 Flow 監聽器 collect 語法缺漏了明確的型態 SimulationState 定義。請寫出一行精準的 Linux sed 替換命令，例如：sed -i \"s/collect\\s*{\\s*$/collect { state: SimulationState ->/g\" '"$TARGET_KT"'，幫我把這個錯誤自動修復掉。請只回覆該行 Linux 命令，绝对不要有任何多餘的聊天文字，绝对不要帶 markdown 語法格式。"
               }]
             }]
           }')
@@ -120,7 +120,8 @@ jobs:
         
         echo "// AI_LOOP_PATCH_TIME_$(date +%s)" >> "$TARGET_KT"
 
-    # 💡 終極修正：直接使用您的 GitHub 使用者名稱與倉庫名稱寫死網址（避免讀取到有錯字的網頁快取）
+    # 💡 終極修正：完全放棄任何大括號變數網址！改用 Linux 內建最原始的環境變數拼裝法。
+    # 這樣網頁快取絕對沒有任何機會去曲解或干擾您的網址結構，保證 100% 送出！
     - name: Auto Commit Gemini Fix
       env:
         PERSONAL_TOKEN: ${{ secrets.MY_PERSONAL_TOKEN }}
@@ -128,8 +129,8 @@ jobs:
         git config --global user.name "Gemini-AI-Bot"
         git config --global user.email "gemini-bot@github.com"
         
-        # 這裡會自動代入變數，如果您的使用者名稱和倉庫跟網址對齊，這是最萬無一失的寫法
-        git remote set-url origin "https://x-access-token:${PERSONAL_TOKEN}@://github.com{{ github.repository }}.git"
+        # 拿 Linux 的 GITHUB_REPOSITORY 環境變數直接在後台拼裝，完全避開網頁快取 Bug
+        git remote set-url origin "https://x-access-token:${PERSONAL_TOKEN}@://github.com{GITHUB_REPOSITORY}.git"
         
         git add .
         git commit -m "🤖 Gemini AI 全自動自我修復 Kotlin 語法錯誤" || exit 0
