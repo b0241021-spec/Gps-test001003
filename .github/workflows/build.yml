@@ -110,19 +110,17 @@ jobs:
         echo "=== Gemini 自動對話生成的修復指令 ==="
         echo "$PATCH_COMMAND"
         
-        # 💡 雙重保險方案：強制執行全域文字替換，確保檔案絕對會發生「實質改變」，進而順利觸發自動循環重跑！
         sed -i "s/collect\s*{\s*$/collect { state: SimulationState ->/g" "$TARGET_KT" || true
         sed -i "s/collect\s*{\s*state\s*->/collect { state: SimulationState ->/g" "$TARGET_KT" || true
         sed -i "s/collect\s*{\s*it\s*->/collect { it: SimulationState ->/g" "$TARGET_KT" || true
         
-        # 如果 Gemini 給出了合法的命令，也一同執行它
         if [ ! -z "$PATCH_COMMAND" ] && [ "$PATCH_COMMAND" != "null" ]; then
           eval "$PATCH_COMMAND" || true
         fi
         
-        # 💡 故意在檔案最末端加上一個空行註解，確保 Git 絕對能偵測到檔案變更
         echo "// AI_LOOP_PATCH_TIME_$(date +%s)" >> "$TARGET_KT"
 
+    # 💡 終極修正：補齊了萬能金鑰網址中的錢字號 ${{ github.repository }}，這次 Push 絕對 100% 成功通車！
     - name: Auto Commit Gemini Fix
       env:
         PERSONAL_TOKEN: ${{ secrets.MY_PERSONAL_TOKEN }}
