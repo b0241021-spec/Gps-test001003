@@ -78,7 +78,20 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    # 💡 核心修正：將網址（API_URL）與金鑰密鑰完全隔離，改用 Header 的方式代入，防止複製截斷或錯位 Bug
+    # 💡 核心修正：在 Gemini 任務內也同步進行解壓縮與檔案歸位，確保可以 100% 定位到 MainActivity.kt！
+    - name: Extract Project For Gemini
+      run: |
+        mkdir -p temp_extracted
+        unzip -q *.zip -d temp_extracted || true
+        rm -f *.zip
+        TARGET_PATH=$(find temp_extracted -name "settings.gradle" -print -quit)
+        if [ ! -z "$TARGET_PATH" ]; then
+          REAL_PROJECT_DIR=$(dirname "$TARGET_PATH")
+          cp -r "$REAL_PROJECT_DIR"/* . 2>/dev/null || true
+          cp -r "$REAL_PROJECT_DIR"/.* . 2>/dev/null || true
+        fi
+        rm -rf temp_extracted
+
     - name: Talk to Gemini and Generate Patch
       id: gemini
       env:
@@ -139,4 +152,3 @@ jobs:
         git add .
         git commit -m "🤖 Gemini AI 全自動自我修復 Kotlin 語法錯誤" || exit 0
         git push
-        
