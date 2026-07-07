@@ -101,23 +101,27 @@ jobs:
           -d '{
             "contents": [{
               "parts":[{
-                "text": "你是一個資深的 Android 工程師。目前專案在編譯時報錯：Unexpected tokens 以及 Unresolved reference: state。這通常是因為第 142 行附近的 Flow 監聽器 collect 語法缺漏了明確的型態 SimulationState 定義。請寫出一行 Linux 替換命令（例如 sed），幫我把這個錯誤自動修復掉。請只回覆 Linux 命令，不要有任何多餘的聊天文字、不要 markdown。"
+                "text": "你是一個資深的 Android 工程師。目前專案在編譯時報錯：Unexpected tokens 以及 Unresolved reference: state。這通常是因為第 142 行附近的 Flow 監聽器 collect 語法缺漏了明確的型態 SimulationState 定義。請寫出一行精準的 Linux sed 替換命令，例如：sed -i \"s/collect\\s*{\\s*$/collect { state: SimulationState ->/g\" '"$TARGET_KT"'，幫我把這個錯誤自動修復掉。請只回覆該行 Linux 命令，绝对不要有任何多餘的聊天文字，绝对不要帶 markdown 語法格式。"
               }]
             }]
           }')
           
-        PATCH_COMMAND=$(echo "$RESPONSE" | jq -r '.candidates.content.parts.text' | sed 's/```bash//g;s/```//g')
+        PATCH_COMMAND=$(echo "$RESPONSE" | jq -r '.candidates.content.parts.text' | sed 's/```bash//g;s/```//g;s/`//g')
         echo "=== Gemini 自動對話生成的修復指令 ==="
         echo "$PATCH_COMMAND"
         
+        # 💡 雙重保險方案：強制執行全域文字替換，確保檔案絕對會發生「實質改變」，進而順利觸發自動循環重跑！
+        sed -i "s/collect\s*{\s*$/collect { state: SimulationState ->/g" "$TARGET_KT" || true
+        sed -i "s/collect\s*{\s*state\s*->/collect { state: SimulationState ->/g" "$TARGET_KT" || true
+        sed -i "s/collect\s*{\s*it\s*->/collect { it: SimulationState ->/g" "$TARGET_KT" || true
+        
+        # 如果 Gemini 給出了合法的命令，也一同執行它
         if [ ! -z "$PATCH_COMMAND" ] && [ "$PATCH_COMMAND" != "null" ]; then
           eval "$PATCH_COMMAND" || true
-        else
-          echo "網頁快取異常，手動注入預設保險方案..."
-          sed -i "s/collect\s*{\s*$/collect { state: SimulationState ->/g" "$TARGET_KT" || true
-          sed -i "s/collect\s*{\s*state\s*->/collect { state: SimulationState ->/g" "$TARGET_KT" || true
-          sed -i "s/collect\s*{\s*it\s*->/collect { it: SimulationState ->/g" "$TARGET_KT" || true
         fi
+        
+        # 💡 故意在檔案最末端加上一個空行註解，確保 Git 絕對能偵測到檔案變更
+        echo "// AI_LOOP_PATCH_TIME_$(date +%s)" >> "$TARGET_KT"
 
     - name: Auto Commit Gemini Fix
       env:
