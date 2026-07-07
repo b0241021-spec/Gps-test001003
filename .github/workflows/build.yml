@@ -23,23 +23,9 @@ jobs:
       with:
         gradle-version: '7.5'
 
-    - name: Extract Project and Relocate
+    # 💡 終極修正：完全拔除 ZIP 解壓與搬移步驟！直接利用目前倉庫現有的實體檔案進行基礎補件
+    - name: Prepare Android Standard Environment
       run: |
-        mkdir -p temp_extracted
-        unzip -q *.zip -d temp_extracted || true
-        rm -f *.zip
-        
-        TARGET_PATH=$(find temp_extracted -name "settings.gradle" -print -quit)
-        if [ -z "$TARGET_PATH" ]; then
-          echo "錯誤：在 ZIP 壓縮檔內找不到 settings.gradle"
-          exit 1
-        fi
-        
-        REAL_PROJECT_DIR=$(dirname "$TARGET_PATH")
-        cp -r "$REAL_PROJECT_DIR"/* . 2>/dev/null || true
-        cp -r "$REAL_PROJECT_DIR"/.* . 2>/dev/null || true
-        rm -rf temp_extracted
-
         cat << 'EOF' > gradle.properties
         android.useAndroidX=true
         android.enableJetifier=true
@@ -78,19 +64,7 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Extract Project For Gemini
-      run: |
-        mkdir -p temp_extracted
-        unzip -q *.zip -d temp_extracted || true
-        rm -f *.zip
-        TARGET_PATH=$(find temp_extracted -name "settings.gradle" -print -quit)
-        if [ ! -z "$TARGET_PATH" ]; then
-          REAL_PROJECT_DIR=$(dirname "$TARGET_PATH")
-          cp -r "$REAL_PROJECT_DIR"/* . 2>/dev/null || true
-          cp -r "$REAL_PROJECT_DIR"/.* . 2>/dev/null || true
-        fi
-        rm -rf temp_extracted
-
+    # 💡 Gemini 任務同步砍掉解壓步驟，直接讀取現有實體檔案
     - name: Talk to Gemini and Generate Patch
       id: gemini
       env:
@@ -143,7 +117,6 @@ jobs:
           sed -i "s/collect\s*{\s*it\s*->/collect { it: SimulationState ->/g" "$TARGET_KT" || true
         fi
 
-    # 💡 核心大絕招：加入 --force 參數，強制將 Gemini 修復好、包含了圖標與屬性的代碼大覆蓋上傳！
     - name: Auto Commit Gemini Fix
       run: |
         git config --global user.name "Gemini-AI-Bot"
