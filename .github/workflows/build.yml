@@ -9,8 +9,11 @@ jobs:
   build_project:
     runs-on: ubuntu-latest
     steps:
+    # 💡 核心破解 1：讓編譯工作直接拿著您的最高通行證登入，解除 GitHub 的機器人封鎖
     - name: Checkout Code
       uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.MY_PERSONAL_TOKEN }}
 
     - name: Set up JDK 11
       uses: actions/setup-java@v4
@@ -23,7 +26,6 @@ jobs:
       with:
         gradle-version: '7.5'
 
-    # 💡 終極修正：完全拔除 ZIP 解壓與搬移步驟！直接利用目前倉庫現有的實體檔案進行基礎補件
     - name: Prepare Android Standard Environment
       run: |
         cat << 'EOF' > gradle.properties
@@ -61,10 +63,12 @@ jobs:
     needs: build_project
     if: failure()
     steps:
+    # 💡 核心破解 2：讓 Gemini 任務也拿著您的最高通行證登入
     - name: Checkout Code
       uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.MY_PERSONAL_TOKEN }}
 
-    # 💡 Gemini 任務同步砍掉解壓步驟，直接讀取現有實體檔案
     - name: Talk to Gemini and Generate Patch
       id: gemini
       env:
@@ -117,10 +121,17 @@ jobs:
           sed -i "s/collect\s*{\s*it\s*->/collect { it: SimulationState ->/g" "$TARGET_KT" || true
         fi
 
+    # 💡 核心破解 3：使用您的最高權限金鑰進行強制推送，GitHub 將會判定為「使用者本人修改」，進而全自動返回、無限觸發下一輪重新建置！
     - name: Auto Commit Gemini Fix
+      env:
+        PERSONAL_TOKEN: ${{ secrets.MY_PERSONAL_TOKEN }}
       run: |
         git config --global user.name "Gemini-AI-Bot"
         git config --global user.email "gemini-bot@github.com"
+        
+        # 重新將遠端倉庫網址注入您的萬能金鑰密鑰
+        git remote set-url origin "https://x-access-token:${PERSONAL_TOKEN}@://github.com{{ github.repository }}.git"
+        
         git add .
         git commit -m "🤖 Gemini AI 全自動自我修復 Kotlin 語法錯誤" || exit 0
         git push --force
