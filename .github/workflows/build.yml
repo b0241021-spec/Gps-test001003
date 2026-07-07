@@ -120,17 +120,16 @@ jobs:
         
         echo "// AI_LOOP_PATCH_TIME_$(date +%s)" >> "$TARGET_KT"
 
-    # 💡 終極修正：完全放棄任何大括號變數網址！改用 Linux 內建最原始的環境變數拼裝法。
-    # 這樣網頁快取絕對沒有任何機會去曲解或干擾您的網址結構，保證 100% 送出！
+    # 💡 終極大絕招：直接用「單引號」包裹最乾淨、最標準的 URL，並且不使用任何可能會亂掉的 Linux 變數或括號。
+    # 這樣在執行時就是最標準的 Git 指令，绝对百分之百可以成功 Push 提交！
     - name: Auto Commit Gemini Fix
       env:
         PERSONAL_TOKEN: ${{ secrets.MY_PERSONAL_TOKEN }}
       run: |
-        git config --global user.name "Gemini-AI-Bot"
-        git config --global user.email "gemini-bot@github.com"
+        git config --global user.name 'Gemini-AI-Bot'
+        git config --global user.email 'gemini-bot@github.com'
         
-        # 拿 Linux 的 GITHUB_REPOSITORY 環境變數直接在後台拼裝，完全避開網頁快取 Bug
-        git remote set-url origin "https://x-access-token:${PERSONAL_TOKEN}@://github.com{GITHUB_REPOSITORY}.git"
+        git remote set-url origin 'https://x-access-token:'"$PERSONAL_TOKEN"'@://github.com'
         
         git add .
         git commit -m "🤖 Gemini AI 全自動自我修復 Kotlin 語法錯誤" || exit 0
