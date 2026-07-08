@@ -53,7 +53,7 @@ jobs:
         GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
         API_URL: "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
       run: |
-        MAX_ATTEMPTS=5
+        MAX_ATTEMPTS=1000
         ATTEMPT=1
         BUILD_SUCCESS=false
 
