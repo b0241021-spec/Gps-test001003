@@ -47,11 +47,12 @@ jobs:
           chmod +x gradlew
         fi
 
-    # 👑 核心大絕招：原地自動無限試錯迴圈 (結構化輸出與變更監控強化版)
+    # 👑 核心大絕招：原地自動無限試錯迴圈 (完全防禦整合版)
     - name: Build and Auto-Heal Loop with Gemini
       env:
         GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
-        API_URL: "[https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent](https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent)"
+        # 🔍 修正處：將 API_URL 恢復成純淨無 markdown 標記的標準網址
+        API_URL: "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
       run: |
         MAX_ATTEMPTS=5
         ATTEMPT=1
