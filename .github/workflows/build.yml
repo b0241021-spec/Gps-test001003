@@ -47,13 +47,13 @@ jobs:
           chmod +x gradlew
         fi
 
-    # 👑 核心大絕招：原地自動無限試錯迴圈 (完全防禦整合版)
+    # 👑 核心大絕招：原地自動無限試錯迴圈 (結構化輸出與變更監控強化版)
     - name: Build and Auto-Heal Loop with Gemini
       env:
         GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
-        API_URL: "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+        API_URL: "[https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent](https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent)"
       run: |
-        MAX_ATTEMPTS=1000
+        MAX_ATTEMPTS=5
         ATTEMPT=1
         BUILD_SUCCESS=false
 
@@ -71,35 +71,53 @@ jobs:
             tail -n 80 build.log > error.log
             cat error.log
             
-            echo "🧠 正在將錯誤回報給 Gemini API..."
-            # 🔍 核心防禦 1：利用 jq --rawfile 安全載入多行日誌，防止 JSON 結構破碎
+            echo "🧠 正在呼叫 Gemini API (要求結構化 JSON 輸出)..."
+            
+            # 🔍 核心防禦 1：利用 jq --rawfile 安全載入多行日誌，並強制設定 responseSchema 要求 JSON 回傳
             PAYLOAD=$(jq -n --rawfile log error.log '{
               contents: [{
                 parts: [{
-                  text: ("你是一個資深 Android 專家，目前專案編譯發生以下錯誤：\n" + $log + "\n\n請給出一段精準的 Linux sed 命令幫我修復這個檔案。只需要回覆單行 Linux 指令（如 sed -i ...），絕對不要包含 ``` 標籤、markdown 語法或任何多餘的聊天文字。")
+                  text: ("你是一個資深 Android 專家，目前專案編譯發生以下錯誤：\n" + $log + "\n\n請給出一段精準的 Linux sed 命令幫我修復這個檔案。")
                 }]
-              }]
+              }],
+              generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                  type: "OBJECT",
+                  properties: {
+                    explanation: {
+                      type: "STRING",
+                      description: "簡短解釋錯誤原因以及如何修正"
+                    },
+                    patch_command: {
+                      type: "STRING",
+                      description: "精準的單行 Linux sed 指令來修正專案，例如: sed -i \"s/old/new/g\" path/to/MainActivity.kt"
+                    }
+                  },
+                  required: ["patch_command"]
+                }
+              }
             }')
 
             RESPONSE=$(curl -s -X POST "${API_URL}?key=${GEMINI_KEY}" \
               -H "Content-Type: application/json" \
               -d "$PAYLOAD")
               
-            # 🔍 核心防禦 2：使用動態變數拆散反單引號，防止 GitHub Actions YAML 檔解析錯誤
-            B_CHAR='`'
-            THREE_B="${B_CHAR}${B_CHAR}${B_CHAR}"
+            # 🔍 核心防禦 2：直接解析標準 JSON，完全擺脫 Markdown 反單引號與雜訊干擾
+            RAW_CONTENT=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text' 2>/dev/null)
             
-            PATCH_COMMAND=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text' 2>/dev/null | sed "s/${THREE_B}bash//g; s/${THREE_B}//g; s/${B_CHAR}//g; s/^[[:space:]]*//; s/[[:space:]]*$//")
+            EXPLANATION=$(echo "$RAW_CONTENT" | jq -r '.explanation' 2>/dev/null)
+            PATCH_COMMAND=$(echo "$RAW_CONTENT" | jq -r '.patch_command' 2>/dev/null)
             
-            echo "=== Gemini 給出的主專案修復指令 ==="
-            echo "$PATCH_COMMAND"
+            echo "💡 Gemini 的分析說明: $EXPLANATION"
+            echo "⚙️ 預期執行的修正指令: $PATCH_COMMAND"
             
             TARGET_KT=$(find . -name "MainActivity.kt" -print -quit)
             if [ ! -z "$TARGET_KT" ]; then
               KT_DIR=$(dirname "$TARGET_KT")
               MY_PACKAGE=$(grep "^package " "$TARGET_KT" | head -n 1)
               
-              # 🔍 核心防禦 3：使用 printf 替代 Heredoc，徹底免除 YAML 縮排干擾，並正確解譯 $MY_PACKAGE 變數
+              # 🔍 核心防禦 3：使用 printf 建立標準 SimulationState 檔案
               printf "%s\n" \
                 "$MY_PACKAGE" \
                 "data class SimulationState(" \
@@ -120,8 +138,17 @@ jobs:
               # 執行 Gemini 的 AI 修正指令
               if [ ! -z "$PATCH_COMMAND" ] && [ "$PATCH_COMMAND" != "null" ]; then
                 echo "正在執行 AI Patch..."
-                eval "$PATCH_COMMAND" || true
+                if eval "$PATCH_COMMAND"; then
+                  echo "✅ AI Patch 執行成功！"
+                else
+                  echo "⚠️ AI Patch 執行失敗，請檢查 sed 命令語法是否正確。"
+                fi
               fi
+              
+              # 🔍 核心防禦 4：在日誌中列印出程式碼的真實修改差異，防止盲目原地空轉
+              echo "=== 📝 目前原始碼變更狀態 (Git Diff) ==="
+              git diff "$TARGET_KT" || true
+              echo "========================================"
               
               echo "// PATCH_LOOP_$(date +%s)" >> "$TARGET_KT"
             else
@@ -145,7 +172,6 @@ jobs:
       run: |
         git config --global user.name "Gemini-AI-Bot"
         git config --global user.email "gemini-bot@github.com"
-        # 🔍 已修復此處的 Git 網址拼接字元污損
         git remote set-url origin https://x-access-token:${PERSONAL_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
         git add .
         git commit -m "🤖 Gemini AI 全自動自我修復成功，更新正確原始碼" || exit 0
