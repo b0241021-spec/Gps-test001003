@@ -100,8 +100,7 @@ jobs:
               MY_PACKAGE=$(grep "^package " "$TARGET_KT" | head -n 1)
               
               # 🔍 核心防禦 3：使用標準 EOF 寫入，移除單引號以允許 $MY_PACKAGE 變數解析
-              cat << EOF > "${KT_DIR}/SimulationState.kt"
-$MY_PACKAGE
+              cat << EOF > "${KT_DIR}/SimulationState.kt"$MY_PACKAGE
 data class SimulationState(
     val isRunning: Boolean = false,
     val currentSpeed: Double = 0.0,
