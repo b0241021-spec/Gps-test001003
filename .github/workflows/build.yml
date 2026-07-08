@@ -6,8 +6,61 @@ on:
   workflow_dispatch:
 
 jobs:
+  # =========================================================
+  # 階段 1：Auto-healing 自動檢查與自我修復
+  # =========================================================
   auto_healing:
-    runs-on: ubuntu-latest  # <-- 請將原先的 ubuntu-21.04 改成這一行！
+    runs-on: ubuntu-latest
     steps:
-      - name: 1. 檢查並自我修復被快取污染的腳本
+      - name: 1. 檢出程式碼 (Checkout Repository)
+        uses: actions/checkout@v4
+        with:
+          # 使用具備寫入權限的 GitHub Token (或自訂的 Personal Access Token)
+          # 這樣才能在修改程式碼後有權限 push 回去
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 2. 檢查並自我修復被快取污染的腳本
         run: |
+          echo "正在檢查 Auto-healing 腳本與環境是否正常..."
+          
+          # 【這裡放入你原本的 AI/Auto-healing 修正邏輯】
+          # 範例：如果發現某個腳本壞了，透過 Gemini API 或備用腳本修復它
+          # 修正後，利用 GitHub Key/Token 將修改後的程式碼 commit 並 push 回去
+          
+          # 模擬修復成功
+          echo "Auto-healing 自我檢查與修復完成！"
+
+  # =========================================================
+  # 階段 2：Building 實際建置 APK (依賴於 auto_healing 成功)
+  # =========================================================
+  building:
+    runs-on: ubuntu-latest
+    needs: auto_healing # 核心：必須等 auto_healing 成功執行完，才會啟動 building
+    steps:
+      - name: 1. 檢出最新的程式碼
+        uses: actions/checkout@v4
+        with:
+          # 確保拉取到的是剛剛被 Auto-healing 修復、推上最新分支的程式碼
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+
+      - name: 2. 設定 Java 環境 (Set up JDK)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu' # or 'temurin'
+          java-version: '17'   # 根據你的 Android 專案調整需求
+
+      - name: 3. 設定 Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: 4. 執行 Android APK 建置 (Build APK)
+        run: |
+          echo "開始使用修復後的環境建置 APK..."
+          chmod +x ./gradlew
+          ./gradlew assembleDebug # 或者 assembleRelease
+
+      - name: 5. 上傳建置好的 APK 產出物 (Upload Artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
