@@ -47,12 +47,11 @@ jobs:
           chmod +x gradlew
         fi
 
-    # 👑 核心大絕招：原地自動無限試錯迴圈 (完全防禦整合版)
+    # 👑 核心大絕招：原地自動無限試錯迴圈 (具備自我診斷的完全防禦版)
     - name: Build and Auto-Heal Loop with Gemini
       env:
         GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
-        # 🔍 修正處：將 API_URL 恢復成純淨無 markdown 標記的標準網址
-        API_URL: "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+        API_URL: "[https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent](https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent)"
       run: |
         MAX_ATTEMPTS=5
         ATTEMPT=1
@@ -103,12 +102,31 @@ jobs:
             RESPONSE=$(curl -s -X POST "${API_URL}?key=${GEMINI_KEY}" \
               -H "Content-Type: application/json" \
               -d "$PAYLOAD")
-              
-            # 🔍 核心防禦 2：直接解析標準 JSON，完全擺脫 Markdown 反單引號與雜訊干擾
-            RAW_CONTENT=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text' 2>/dev/null)
             
-            EXPLANATION=$(echo "$RAW_CONTENT" | jq -r '.explanation' 2>/dev/null)
-            PATCH_COMMAND=$(echo "$RAW_CONTENT" | jq -r '.patch_command' 2>/dev/null)
+            # 🔍 核心防禦 2：API 失敗自動自我診斷機制
+            # 檢查 API 是否回傳錯誤訊息 (例如 API Key 錯誤或配額超限)
+            API_ERROR=$(echo "$RESPONSE" | jq -r '.error.message' 2>/dev/null)
+            if [ ! -z "$API_ERROR" ] && [ "$API_ERROR" != "null" ]; then
+              echo "⚠️ Gemini API 呼叫失敗！錯誤原因: $API_ERROR"
+              echo "原始回應內容: $RESPONSE"
+              RAW_CONTENT="null"
+            else
+              # 直接解析標準 JSON
+              RAW_CONTENT=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text' 2>/dev/null)
+            fi
+            
+            # 如果解析出來的內容為空，提供詳細除錯線索
+            if [ -z "$RAW_CONTENT" ] || [ "$RAW_CONTENT" = "null" ]; then
+              echo "⚠️ 無法解析模型回傳內容。原始 API 回應如下："
+              echo "$RESPONSE"
+              EXPLANATION="API 回傳無效"
+              PATCH_COMMAND="null"
+            else
+              # 移除非法字元（例如有時候 LLM 會在 JSON 外面包一層 markdown codeblock）
+              CLEANED_CONTENT=$(echo "$RAW_CONTENT" | sed 's/```json//g; s/```//g')
+              EXPLANATION=$(echo "$CLEANED_CONTENT" | jq -r '.explanation' 2>/dev/null)
+              PATCH_COMMAND=$(echo "$CLEANED_CONTENT" | jq -r '.patch_command' 2>/dev/null)
+            fi
             
             echo "💡 Gemini 的分析說明: $EXPLANATION"
             echo "⚙️ 預期執行的修正指令: $PATCH_COMMAND"
