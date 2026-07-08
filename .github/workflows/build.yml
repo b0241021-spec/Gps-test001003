@@ -146,7 +146,8 @@ EOF
       run: |
         git config --global user.name "Gemini-AI-Bot"
         git config --global user.email "gemini-bot@github.com"
-        git remote set-url origin https://x-access-token:${PERSONAL_TOKEN}@[github.com/$]https://github.com/${GITHUB_REPOSITORY}.git
+        # 🔍 已修復此處的 Git 網址拼接字元污損
+        git remote set-url origin https://x-access-token:${PERSONAL_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
         git add .
         git commit -m "🤖 Gemini AI 全自動自我修復成功，更新正確原始碼" || exit 0
         git push --force
