@@ -1,132 +1,159 @@
-name: Android Gemini Auto Repair
+name: Gemini AI Loop-Healing Android Build
 
 on:
   push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch: # 允許手動觸發
+    branches: [ "main", "master" ]
+  workflow_dispatch:
 
 jobs:
-  auto-repair:
+  build_with_ai_loop:
     runs-on: ubuntu-latest
-
-    # 賦予寫入權限，這樣腳本才能把修好的程式碼 push 回去
-    permissions:
-      contents: write
-
     steps:
-    - name: Checkout Repository
+    - name: Checkout Code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0 # 取得完整歷史紀錄
+        token: ${{ secrets.MY_PERSONAL_TOKEN }}
 
-    - name: Set up JDK 17
+    - name: Set up JDK 11
       uses: actions/setup-java@v4
       with:
-        java-version: '17'
+        java-version: '11'
         distribution: 'temurin'
-        cache: gradle
 
-    - name: Grant Execute Permission for Gradlew
-      run: chmod +x gradlew
+    - name: Setup Gradle 7.5
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '7.5'
 
-    - name: Install Dependencies (jq)
-      run: sudo apt-get install -y jq
-
-    - name: Run Gemini Auto Repair Loop
-      env:
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        TARGET_FILE: "app/src/main/java/com/example/myapp/MainActivity.kt" # 💡 請根據實際路徑修改
-        LOG_FILE: "build_error.log"
-        MAX_LOOPS: 5
+    - name: Prepare Android Standard Environment
       run: |
-        echo "🚀 啟動 Gemini Android 自動修復機制 (CI/CD 專用版)..."
+        cat << 'EOF' > gradle.properties
+        android.useAndroidX=true
+        android.enableJetifier=true
+        EOF
         
-        # 設定 Git 機器人身分（Push 程式碼所需）
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        mkdir -p app/src/main/res/mipmap-hdpi
+        cat << 'EOF' > app/src/main/res/mipmap-hdpi/ic_launcher.png
+        iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+        EOF
+        cp app/src/main/res/mipmap-hdpi/ic_launcher.png app/src/main/res/mipmap-hdpi/ic_launcher_round.png
 
+    - name: Prepare Executable
+      run: |
+        if [ -f "gradlew" ]; then
+          chmod +x gradlew
+        else
+          gradle wrapper --gradle-version 7.5
+          chmod +x gradlew
+        fi
+
+    # 👑 核心大絕招：原地自動無限試錯迴圈 (完全防禦整合版)
+    - name: Build and Auto-Heal Loop with Gemini
+      env:
+        GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
+        API_URL: "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+      run: |
+        MAX_ATTEMPTS=5
+        ATTEMPT=1
         BUILD_SUCCESS=false
 
-        for i in $(seq 1 $MAX_LOOPS); do
-            echo "----------------------------------------"
-            echo "🔄 正在進行第 $i / $MAX_LOOPS 次修復嘗試..."
-            echo "----------------------------------------"
+        while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+          echo "========================================"
+          echo "  🚀 開始第 $ATTEMPT 次嘗試編譯 APK..."
+          echo "========================================"
+          
+          if ./gradlew assembleDebug --no-daemon > build.log 2>&1; then
+            echo "✅ 恭喜！第 $ATTEMPT 次編譯成功！"
+            BUILD_SUCCESS=true
+            break
+          else
+            echo "❌ 第 $ATTEMPT 次編譯失敗。正在擷取錯誤日誌..."
+            tail -n 80 build.log > error.log
+            cat error.log
+            
+            echo "🧠 正在將錯誤回報給 Gemini API..."
+            # 🔍 核心防禦 1：利用 jq --rawfile 安全載入多行日誌，防止 JSON 結構破碎
+            PAYLOAD=$(jq -n --rawfile log error.log '{
+              contents: [{
+                parts: [{
+                  text: ("你是一個資深 Android 專家，目前專案編譯發生以下錯誤：\n" + $log + "\n\n請給出一段精準的 Linux sed 命令幫我修復這個檔案。只需要回覆單行 Linux 指令（如 sed -i ...），絕對不要包含 ``` 標籤、markdown 語法或任何多餘的聊天文字。")
+                }]
+              }]
+            }')
 
-            echo "🛠️ 正在執行 Gradle 建置..."
-            ./gradlew assembleDebug > $LOG_FILE 2>&1
-            BUILD_STATUS=$?
-
-            if [ $BUILD_STATUS -eq 0 ]; then
-                echo "🎉 恭喜！專案已建置成功！"
-                BUILD_SUCCESS=true
-                rm -f $LOG_FILE
-                break
+            RESPONSE=$(curl -s -X POST "${API_URL}?key=${GEMINI_KEY}" \
+              -H "Content-Type: application/json" \
+              -d "$PAYLOAD")
+              
+            # 🔍 核心防禦 2：使用動態變數拆散反單引號，防止 GitHub Actions YAML 檔解析錯誤
+            B_CHAR='`'
+            THREE_B="${B_CHAR}${B_CHAR}${B_CHAR}"
+            
+            PATCH_COMMAND=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text' 2>/dev/null | sed "s/${THREE_B}bash//g; s/${THREE_B}//g; s/${B_CHAR}//g; s/^[[:space:]]*//; s/[[:space:]]*$//")
+            
+            echo "=== Gemini 給出的主專案修復指令 ==="
+            echo "$PATCH_COMMAND"
+            
+            TARGET_KT=$(find . -name "MainActivity.kt" -print -quit)
+            if [ ! -z "$TARGET_KT" ]; then
+              KT_DIR=$(dirname "$TARGET_KT")
+              MY_PACKAGE=$(grep "^package " "$TARGET_KT" | head -n 1)
+              
+              # 🔍 核心防禦 3：使用標準 EOF 寫入，移除單引號以允許 $MY_PACKAGE 變數解析
+              cat << EOF > "${KT_DIR}/SimulationState.kt"
+$MY_PACKAGE
+data class SimulationState(
+    val isRunning: Boolean = false,
+    val currentSpeed: Double = 0.0,
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
+    val progress: Int = 0,
+    val speedMultiplier: Float = 1.0f,
+    val statusText: String = ""
+)
+EOF
+              
+              # 預設基礎語法修正
+              sed -i "s/collect\s*{\s*$/collect { state: SimulationState ->/g" "$TARGET_KT" || true
+              sed -i "s/collect\s*{\s*state\s*->/collect { state: SimulationState ->/g" "$TARGET_KT" || true
+              sed -i "s/collect\s*{\s*it\s*->/collect { it: SimulationState ->/g" "$TARGET_KT" || true
+              
+              # 執行 Gemini 的 AI 修正指令
+              if [ ! -z "$PATCH_COMMAND" ] && [ "$PATCH_COMMAND" != "null" ]; then
+                echo "正在執行 AI Patch..."
+                eval "$PATCH_COMMAND" || true
+              fi
+              
+              echo "// PATCH_LOOP_$(date +%s)" >> "$TARGET_KT"
+            else
+              echo "找不到 MainActivity.kt，跳過本輪修復。"
             fi
-
-            echo "❌ 建置失敗，正在召喚 Gemini 進行分析..."
-
-            SYSTEM_PROMPT="你是一個高階 Android 資深工程師。請分析提供的原始碼與 Gradle 錯誤日誌（Error Log），並直接修正程式碼中的錯誤。
-        請注意：
-        1. **只能回傳修改後的完整程式碼**，絕對不要包含任何解釋、Markdown 標記（如 \`\`\`kotlin）或額外的文字。
-        2. 確保語法完全正確，特別注意括號、導入包（imports）與變數命名。"
-
-            # 使用 jq --rawfile 安全封裝
-            PAYLOAD=$(jq -n \
-                --rawfile code "$TARGET_FILE" \
-                --rawfile err "$LOG_FILE" \
-                --arg sys_prompt "$SYSTEM_PROMPT" \
-                '{
-                    "systemInstruction": { "parts": [{ "text": $sys_prompt }] },
-                    "contents": [{
-                        "parts": [{ "text": ("以下是目前有問題的原始碼：\n" + $code + "\n\n以下是 Gradle 錯誤日誌：\n" + $err) }]
-                    }],
-                    "generationConfig": {
-                        "temperature": 0.2,
-                        "responseMimeType": "text/plain"
-                    }
-                }')
-
-            echo "🤖 正在等待 Gemini 回傳修正後的程式碼..."
-            RESPONSE=$(curl -s -X POST \
-                "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}" \
-                -H "Content-Type: application/json" \
-                -d "$PAYLOAD")
-
-            FIXED_CODE=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // empty')
-
-            if [ -z "$FIXED_CODE" ] || [[ "$FIXED_CODE" == *"generateContent"* ]]; then
-                echo "⚠️ API 回傳異常，無法擷取程式碼。"
-                echo "$RESPONSE"
-                exit 1
-            fi
-
-            # 二次清洗 Markdown 標籤
-            if [[ "$FIXED_CODE" == "\`\`\`"* ]]; then
-                echo "🧹 進行自動清洗..."
-                FIXED_CODE=$(echo "$FIXED_CODE" | sed -e 's/```[a-zA-Z]*//g' -e 's/```//g')
-            fi
-
-            # 覆寫檔案
-            echo "$FIXED_CODE" > "$TARGET_FILE"
-            echo "💾 修復程式碼已寫入 $TARGET_FILE，準備進入下一輪驗證。"
+          fi
+          
+          ATTEMPT=$((ATTEMPT+1))
+          sleep 3 # 稍微緩衝，避免請求頻率過高
         done
 
-        # 結束後的 Git 處理
-        if [ "$BUILD_SUCCESS" = true ]; then
-            # 檢查檔案是否有變動
-            if [ -n "$(git status --porcelain)" ]; then
-                echo "📝 偵測到程式碼有被 Gemini 修改，準備 Commit 並 Push..."
-                git add "$TARGET_FILE"
-                git commit -m "chore: [Gemini Auto Repair] 自動修復建置錯誤"
-                git push origin HEAD:${{ github.ref }}
-                echo "✅ 成功將修復後的程式碼推回分支！"
-            else
-                echo "😎 專案本來就是好的，Gemini 沒有做任何修改。"
-            fi
-            exit 0
-        else
-            echo "😭 已達到最大循環次數，建置依然失敗。請查看產出的 $LOG_FILE。"
-            exit 1
+        if [ "$BUILD_SUCCESS" = false ]; then
+          echo "❌ 已達到最大嘗試次數 $MAX_ATTEMPTS 次，編譯依然失敗。"
+          exit 1
         fi
+
+    - name: Auto Commit Gemini Fix (Only on Success)
+      if: success()
+      env:
+        PERSONAL_TOKEN: ${{ secrets.MY_PERSONAL_TOKEN }}
+      run: |
+        git config --global user.name "Gemini-AI-Bot"
+        git config --global user.email "gemini-bot@github.com"
+        git remote set-url origin https://x-access-token:${PERSONAL_TOKEN}@[github.com/$](https://github.com/$){GITHUB_REPOSITORY}.git
+        git add .
+        git commit -m "🤖 Gemini AI 全自動自我修復成功，更新正確原始碼" || exit 0
+        git push --force
+
+    - name: Upload APK Artifact
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: Manus-GPS-Successful-APK
+        path: "**/build/outputs/apk/debug/*.apk"
