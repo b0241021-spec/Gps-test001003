@@ -94,7 +94,7 @@ jobs:
         if grep -q "github.com{GITHUB_REPOSITORY}" "$SCRIPT_PATH" 2>/dev/null || grep -q "@://" "$SCRIPT_PATH" 2>/dev/null; then
           echo "警告：偵測到手機網頁快取干擾！正在全自動修正 auto_healing 腳本自身..."
           
-          sed -i 's|git remote set-url origin.*|git remote set-url origin https://x-access-token:${PERSONAL_TOKEN}@github.com/${GITHUB_REPOSITORY}.git|g' "$SCRIPT_PATH"
+          sed -i 's|git remote set-url origin https://x-access-token:${PERSONAL_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
           
           git config --global user.name "Script-Self-Healer"
           git config --global user.email "healer@github.com"
