@@ -6791,23 +6791,23 @@ java.lang.NumberFormatException: Not a number: 37.1
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
-> Task :app:mergeDebugResources
 > Task :app:mergeDebugAssets
-> Task :app:dataBindingGenBaseClassesDebug UP-TO-DATE
 > Task :app:compressDebugAssets
 > Task :app:processDebugJavaRes NO-SOURCE
-> Task :app:desugarDebugFileDependencies
-> Task :app:mergeDebugJniLibFolders
+> Task :app:mergeDebugResources
+> Task :app:dataBindingGenBaseClassesDebug UP-TO-DATE
 > Task :app:checkDebugDuplicateClasses
+> Task :app:desugarDebugFileDependencies
 > Task :app:processDebugResources
-> Task :app:mergeDebugNativeLibs NO-SOURCE
+> Task :app:mergeExtDexDebug UP-TO-DATE
 > Task :app:compileDebugKotlin UP-TO-DATE
 > Task :app:compileDebugJavaWithJavac
 > Task :app:compileDebugSources
 > Task :app:mergeDebugJavaResource UP-TO-DATE
-> Task :app:mergeExtDexDebug UP-TO-DATE
 > Task :app:mergeLibDexDebug
 > Task :app:dexBuilderDebug
+> Task :app:mergeDebugJniLibFolders
+> Task :app:mergeDebugNativeLibs NO-SOURCE
 > Task :app:stripDebugDebugSymbols NO-SOURCE
 > Task :app:mergeProjectDexDebug
 > Task :app:validateSigningDebug
@@ -6822,5 +6822,5 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 See https://docs.gradle.org/7.5/userguide/command_line_interface.html#sec:command_line_warnings
 
-BUILD SUCCESSFUL in 1m 20s
+BUILD SUCCESSFUL in 1m 23s
 31 actionable tasks: 18 executed, 13 up-to-date
