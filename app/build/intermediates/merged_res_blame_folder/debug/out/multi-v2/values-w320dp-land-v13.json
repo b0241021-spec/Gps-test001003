@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "/home/runner/work/Gps-test001003/Gps-test001003/app/build/intermediates/incremental/mergeDebugResources/merged.dir/values-w320dp-land-v13/values-w320dp-land-v13.xml",
+            "map": [
+                {
+                    "source": "/home/runner/.gradle/caches/transforms-3/241726933caf4db3c567bbb2c168a481/transformed/material-1.5.0/res/values-w320dp-land-v13/values-w320dp-land-v13.xml",
+                    "from": {
+                        "startLines": "2,3",
+                        "startColumns": "4,4",
+                        "startOffsets": "55,110",
+                        "endColumns": "54,61",
+                        "endOffsets": "105,167"
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -1,4 +1,6 @@
 package com.gpssimulator.ui
+import kotlinx.coroutines.flow.collect
+import com.gpssimulator.data.SimulationState
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -226,3 +228,7 @@ class MainActivity : AppCompatActivity() {
 
 private fun Double.format(digits: Int): String = "%.${digits}f".format(this)
 // PATCH_LOOP_1783496544
+// PATCH_LOOP_1783646925
+// PATCH_LOOP_1783646950
+// PATCH_LOOP_1783646986
+// PATCH_LOOP_1783647017

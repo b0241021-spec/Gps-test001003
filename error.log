@@ -1,61 +1,29 @@
-	at org.gradle.launcher.daemon.server.exec.StartBuildOrRespondWithBusy$1.run(StartBuildOrRespondWithBusy.java:52)
-	at org.gradle.launcher.daemon.server.DaemonStateCoordinator$1.run(DaemonStateCoordinator.java:297)
-	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
-	at org.gradle.internal.concurrent.ManagedExecutorImpl$1.run(ManagedExecutorImpl.java:48)
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
-	at java.base/java.lang.Thread.run(Thread.java:829)
-
+To honour the JVM settings for this build a single-use Daemon process will be forked. See https://docs.gradle.org/7.5/userguide/gradle_daemon.html#sec:disabling_the_daemon.
+Daemon will be stopped at the end of the build 
 > Task :app:preBuild UP-TO-DATE
 > Task :app:preDebugBuild UP-TO-DATE
 > Task :app:compileDebugAidl NO-SOURCE
 > Task :app:compileDebugRenderscript NO-SOURCE
-> Task :app:dataBindingMergeDependencyArtifactsDebug
-> Task :app:dataBindingMergeGenClassesDebug
-> Task :app:generateDebugResValues
-> Task :app:generateDebugResources
-> Task :app:generateDebugBuildConfig
-> Task :app:checkDebugAarMetadata
-> Task :app:createDebugCompatibleScreenManifests
-> Task :app:extractDeepLinksDebug
-> Task :app:mergeDebugResources
-> Task :app:processDebugMainManifest
-> Task :app:dataBindingGenBaseClassesDebug
-> Task :app:processDebugManifest
-> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
-> Task :app:javaPreCompileDebug
-> Task :app:mergeDebugShaders
-> Task :app:compileDebugShaders NO-SOURCE
-> Task :app:generateDebugAssets UP-TO-DATE
-> Task :app:mergeDebugAssets
-> Task :app:compressDebugAssets
-> Task :app:processDebugJavaRes NO-SOURCE
-> Task :app:desugarDebugFileDependencies
-> Task :app:checkDebugDuplicateClasses
-> Task :app:mergeDebugJniLibFolders
-> Task :app:processDebugManifestForPackage
-> Task :app:mergeLibDexDebug
-> Task :app:mergeDebugNativeLibs NO-SOURCE
-> Task :app:stripDebugDebugSymbols NO-SOURCE
-> Task :app:processDebugResources
-> Task :app:validateSigningDebug
-> Task :app:mergeExtDexDebug
+> Task :app:dataBindingMergeDependencyArtifactsDebug UP-TO-DATE
+> Task :app:dataBindingMergeGenClassesDebug UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:dataBindingGenBaseClassesDebug UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+
+> Task :app:compileDebugKotlin
+e: /home/runner/work/Gps-test001003/Gps-test001003/app/src/main/java/com/gpssimulator/ui/MainActivity.kt: (143, 32): This is an internal kotlinx.coroutines API that should not be used from outside of kotlinx.coroutines. No compatibility guarantees are provided. It is recommended to report your use-case of internal API to kotlinx.coroutines issue tracker, so stable API could be provided instead
+e: /home/runner/work/Gps-test001003/Gps-test001003/app/src/main/java/com/gpssimulator/ui/MainActivity.kt: (143, 40): Type mismatch: inferred type is (SimulationState) -> Unit but FlowCollector<SimulationState> was expected
 
 > Task :app:compileDebugKotlin FAILED
-e: /home/runner/work/Gps-test001003/Gps-test001003/app/src/main/java/com/gpssimulator/ui/MainActivity.kt: (142, 32): This is an internal kotlinx.coroutines API that should not be used from outside of kotlinx.coroutines. No compatibility guarantees are provided. It is recommended to report your use-case of internal API to kotlinx.coroutines issue tracker, so stable API could be provided instead
-e: /home/runner/work/Gps-test001003/Gps-test001003/app/src/main/java/com/gpssimulator/ui/MainActivity.kt: (142, 40): Type mismatch: inferred type is (com.gpssimulator.ui.SimulationState) -> Unit but FlowCollector<com.gpssimulator.data.SimulationState> was expected
-e: /home/runner/work/Gps-test001003/Gps-test001003/app/src/main/java/com/gpssimulator/ui/MainActivity.kt: (143, 50): Unresolved reference: currentLocation
-e: /home/runner/work/Gps-test001003/Gps-test001003/app/src/main/java/com/gpssimulator/ui/MainActivity.kt: (143, 95): Unresolved reference: currentLocation
-e: /home/runner/work/Gps-test001003/Gps-test001003/app/src/main/java/com/gpssimulator/ui/MainActivity.kt: (144, 51): Unresolved reference: direction
-e: /home/runner/work/Gps-test001003/Gps-test001003/app/src/main/java/com/gpssimulator/ui/MainActivity.kt: (145, 47): Unresolved reference: speed
-e: /home/runner/work/Gps-test001003/Gps-test001003/app/src/main/java/com/gpssimulator/ui/MainActivity.kt: (146, 47): Unresolved reference: scale
-e: /home/runner/work/Gps-test001003/Gps-test001003/app/src/main/java/com/gpssimulator/ui/MainActivity.kt: (147, 41): Unresolved reference: statusMessage
-e: /home/runner/work/Gps-test001003/Gps-test001003/app/src/main/java/com/gpssimulator/ui/MainActivity.kt: (149, 50): Unresolved reference: direction
-e: /home/runner/work/Gps-test001003/Gps-test001003/app/src/main/java/com/gpssimulator/ui/MainActivity.kt: (150, 47): Unresolved reference: speed
-e: /home/runner/work/Gps-test001003/Gps-test001003/app/src/main/java/com/gpssimulator/ui/MainActivity.kt: (151, 47): Unresolved reference: scale
-e: /home/runner/work/Gps-test001003/Gps-test001003/app/src/main/java/com/gpssimulator/ui/MainActivity.kt: (153, 52): Unresolved reference: isSimulating
-e: /home/runner/work/Gps-test001003/Gps-test001003/app/src/main/java/com/gpssimulator/ui/MainActivity.kt: (154, 48): Unresolved reference: isMoving
-e: /home/runner/work/Gps-test001003/Gps-test001003/app/src/main/java/com/gpssimulator/ui/MainActivity.kt: (154, 66): Unresolved reference: isSimulating
 
 FAILURE: Build failed with an exception.
 
@@ -76,5 +44,5 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 See https://docs.gradle.org/7.5/userguide/command_line_interface.html#sec:command_line_warnings
 
-BUILD FAILED in 1m
-24 actionable tasks: 24 executed
+BUILD FAILED in 14s
+14 actionable tasks: 1 executed, 13 up-to-date
